@@ -26,7 +26,15 @@ An AI-powered SQL IDE that converts natural language to SQL queries.
      - User rules (`~/.ai2sqlrules`)
      - Project rules (`.ai2sqlrules`)
 
-4. **Editor Session (`editor/`)**
+4. **Schema Management (`core/schema/`)**
+    - Local schema definition support
+    - Table and column information
+    - Schema loading from YAML files
+    - Multiple schema sources:
+      - Project schema files
+      - Database connections
+
+5. **Editor Session (`editor/`)**
    - Manages user interaction sessions
    - Handles input/output
    - Maintains session history
@@ -89,6 +97,50 @@ theme: dracula
 # .ai2sqlconfig
 dialect: hive
 history_size: 2000
+```
+
+## Schema Management
+
+### Schema Definition
+```yaml
+# tables.yml
+tables:
+  - name: users
+    comment: "User information table"
+    columns:
+      - name: id
+        type: bigint
+        nullable: false
+        comment: "User ID"
+      - name: username
+        type: varchar(50)
+        comment: "User's login name"
+      - name: created_at
+        type: timestamp
+        comment: "Account creation time"
+
+- name: orders
+  comment: "Order information"
+  columns:
+    - name: order_id
+      type: bigint
+      nullable: false
+      comment: "Order ID"
+    - name: user_id
+      type: bigint
+      comment: "Reference to users.id"
+    - name: total_amount
+      type: decimal(10,2)
+      comment: "Order total amount"
+```
+
+### Loading Schema
+```bash
+# Load from project schema file
+ai2sql --schema ./tables.yml
+
+# Load from multiple files
+ai2sql --schema ./users.yml --schema ./orders.yml
 ```
 
 ## Rule System
