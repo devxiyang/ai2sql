@@ -37,27 +37,26 @@ def chat(schema: str, dialect: str, api_key: str, timeout: int,
     config = Config()
     config.load_config()
     
-    # 命令行参数覆盖配置
-    model_config = config.get("model", {})
-    if temperature is not None:
-        model_config["temperature"] = temperature
-    if max_tokens is not None:
-        model_config["max_tokens"] = max_tokens
-    if top_p is not None:
-        model_config["top_p"] = top_p
+    # 构建模型配置
+    model_config = {
+        "temperature": temperature or config.get("model", "temperature", default=0.7),
+        "max_tokens": max_tokens or config.get("model", "max_tokens", default=2000),
+        "top_p": top_p or config.get("model", "top_p", default=0.9),
+        "timeout": config.get("model", "timeout", default=30)
+    }
     
     try:
         manager = ChatManager(
             api_key=api_key or config.get("api", "key"),
-            model=config.get("api", "model"),
-            base_url=config.get("api", "base_url"),
+            model=config.get("api", "model", default="deepseek-reasoner"),
+            base_url=config.get("api", "base_url", default="https://api.deepseek.com/v1"),
             model_config=model_config
         )
         
         if schema:
             manager.schema_manager.load_schema_file(schema)
         
-        manager.set_dialect(dialect or config.get("sql", "dialect"))
+        manager.set_dialect(dialect or config.get("sql", "dialect", default="hive"))
         
         session_timeout = timeout or config.get("session", "timeout", default=300)
         
@@ -80,30 +79,39 @@ def chat(schema: str, dialect: str, api_key: str, timeout: int,
                     continue
                 
                 # 读取输入
-                query = console.input("[bold blue]You:[/bold blue] ")
+                query = input("You: ").strip()
                 last_input_time = time.time()
                 
                 if query.lower() in ('exit', 'quit'):
                     break
                 
-                if not query.strip():
+                if not query:
                     continue
                     
                 console.print("\n[bold green]AI:[/bold green]", end=" ")
                 
-                with console.status("[bold yellow]AI正在思考...[/bold yellow]"):
-                    collected_text = []
-                    with Live(console=console, refresh_per_second=4) as live:
-                        for chunk in manager.generate_response(query):
-                            collected_text.append(chunk)
-                            try:
-                                # 思维链内容使用不同的样式
-                                if chunk.startswith("思考过程："):
-                                    live.update(f"[dim]{chunk}[/dim]")
-                                else:
-                                    live.update(Markdown("".join(collected_text)))
-                            except:
-                                live.update("".join(collected_text))
+                # 使用单个 Live 显示来更新内容
+                collected_text = []
+                with Live(console=console, refresh_per_second=4) as live:
+                    for chunk in manager.generate_response(query):
+                        collected_text.append(chunk)
+                        content = "".join(collected_text)
+                        
+                        # 处理思维链和SQL内容的显示
+                        if "思考过程：" in content:
+                            parts = content.split("\n\n生成的SQL：\n", 1)
+                            if len(parts) > 1:
+                                thinking, sql = parts
+                                display = f"[dim]{thinking}[/dim]\n\n[bold]生成的SQL：[/bold]\n```sql\n{sql}\n```"
+                            else:
+                                display = f"[dim]{content}[/dim]"
+                        else:
+                            display = f"```sql\n{content}\n```"
+                            
+                        try:
+                            live.update(Markdown(display))
+                        except:
+                            live.update(content)
                 
                 console.print("\n")
                 

@@ -47,11 +47,21 @@ class MockChatManager(ChatManager):
         }
 
 @pytest.fixture
-def chat_manager(config, test_data_dir):
+def chat_manager(config, test_data_dir, tmp_path):
+    # 使用临时目录作为SQL输出目录
+    sql_output_dir = tmp_path / "sql_output"
+    
     manager = ChatManager(
-        api_key=os.getenv("DEEPSEEK_API_KEY"),
-        model=config.get("model"),
-        base_url=config.get("base_url")
+        api_key=os.getenv("API_KEY"),
+        model=os.getenv("API_MODEL", "deepseek-chat"),
+        base_url=os.getenv("API_BASE_URL", "https://api.deepseek.com/v1"),
+        model_config={
+            "temperature": float(os.getenv("MODEL_TEMPERATURE", "0.7")),
+            "max_tokens": int(os.getenv("MODEL_MAX_TOKENS", "2000")),
+            "top_p": float(os.getenv("MODEL_TOP_P", "0.9")),
+            "timeout": int(os.getenv("MODEL_TIMEOUT", "30"))
+        },
+        sql_output_dir=str(sql_output_dir)
     )
     
     # 加载测试schema

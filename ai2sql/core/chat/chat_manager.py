@@ -1,7 +1,9 @@
 from typing import Dict, Any, Optional, Generator, Union
+from pathlib import Path
 from openai import OpenAI
 from ..dialects import DialectManager
 from ..schema.schema_manager import SchemaManager
+from ...utils.sql_writer import SQLWriter
 import logging
 import os
 
@@ -12,7 +14,9 @@ class ChatManager:
     def __init__(self, api_key: Optional[str] = None, 
                  model: str = "deepseek-reasoner", 
                  base_url: str = "https://api.deepseek.com/v1", 
-                 model_config: Optional[Dict[str, Any]] = None):
+                 model_config: Optional[Dict[str, Any]] = None,
+                 sql_output_dir: str = "generated_sql",
+                 schema_dir: Optional[str] = None):
         if not api_key:
             api_key = os.getenv("API_KEY")
             if not api_key:
@@ -27,6 +31,24 @@ class ChatManager:
         self.schema_manager = SchemaManager()
         self.dialect = "hive"
         self.model_config = model_config or {"max_tokens": 2000}
+        self.sql_writer = SQLWriter(sql_output_dir)
+        
+        # 如果提供了schema目录，自动加载
+        if schema_dir:
+            self.load_schemas(schema_dir)
+            
+    def load_schemas(self, schema_dir: Union[str, Path], recursive: bool = True) -> None:
+        """加载schema目录
+        
+        Args:
+            schema_dir: schema目录路径
+            recursive: 是否递归搜索子目录
+        """
+        self.schema_manager.load_schema_dir(schema_dir, recursive)
+        
+    def clear_schemas(self) -> None:
+        """清除所有已加载的schema"""
+        self.schema_manager.clear_schemas()
         
     def set_dialect(self, dialect: str) -> None:
         """设置SQL方言"""
@@ -60,7 +82,7 @@ class ChatManager:
         
         return "\n\n".join(prompts)
         
-    def generate_response(self, user_input: str, stream: bool = True) -> Union[Dict[str, Any], Generator[str, None, None]]:
+    def generate_response(self, user_input: str, stream: bool = True, save_sql: bool = True) -> Union[Dict[str, Any], Generator[str, None, None]]:
         """生成AI响应"""
         messages = [
             {"role": "system", "content": self.get_system_prompt()},
@@ -80,7 +102,7 @@ class ChatManager:
             if stream:
                 def response_generator():
                     reasoning_content = []
-                    content = []
+                    sql_content = []
                     current_type = "reasoning"
                     
                     for chunk in response:
@@ -92,15 +114,23 @@ class ChatManager:
                         else:
                             content = chunk.choices[0].delta.content
                             if content:
+                                sql_content.append(content)
                                 if current_type == "reasoning":
                                     yield "\n\n生成的SQL：\n"
                                     current_type = "content"
                                 yield content
                     
+                    # 保存SQL到文件
+                    if save_sql and sql_content:
+                        sql = "".join(sql_content)
+                        description = user_input
+                        filepath = self.sql_writer.write_sql(sql, description)
+                        yield f"\n\nSQL已保存到文件: {filepath}"
+                    
                     # 记录完整响应
                     full_response = {
                         "reasoning": "".join(reasoning_content),
-                        "content": "".join(content)
+                        "content": "".join(sql_content)
                     }
                     logger.info(f"Received complete response from API:\n{full_response}")
                 
@@ -108,10 +138,17 @@ class ChatManager:
             else:
                 content = response.choices[0].message.content
                 reasoning = response.choices[0].message.reasoning_content
+                
+                # 保存SQL到文件
+                if save_sql and content:
+                    filepath = self.sql_writer.write_sql(content, user_input)
+                    logger.info(f"SQL saved to: {filepath}")
+                
                 logger.info(f"Received response from API:\n{content}\nReasoning:\n{reasoning}")
                 return {
                     "content": content,
-                    "reasoning": reasoning
+                    "reasoning": reasoning,
+                    "sql_file": filepath if save_sql and content else None
                 }
             
         except Exception as e:
