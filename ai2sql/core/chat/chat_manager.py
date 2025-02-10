@@ -1,4 +1,4 @@
-from typing import List, Dict, Any, Optional, Generator, Union
+from typing import Dict, Any, Optional, Generator, Union
 from openai import OpenAI
 from ..dialects import DialectManager
 from ..schema.schema_manager import SchemaManager
@@ -9,19 +9,24 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class ChatManager:
-    def __init__(self, api_key: Optional[str] = None, model: str = "deepseek-chat", base_url: str = "https://api.deepseek.com/v1"):
+    def __init__(self, api_key: Optional[str] = None, 
+                 model: str = "deepseek-reasoner", 
+                 base_url: str = "https://api.deepseek.com/v1", 
+                 model_config: Optional[Dict[str, Any]] = None):
         if not api_key:
-            api_key = os.getenv("API_KEY") or os.getenv("OPENAI_API_KEY")
+            api_key = os.getenv("API_KEY")
             if not api_key:
-                raise ValueError("API key must be provided either through constructor or environment variables (API_KEY or OPENAI_API_KEY)")
+                raise ValueError("API key must be provided either through constructor or environment variables")
             
         self.client = OpenAI(
             api_key=api_key,
-            base_url=base_url
+            base_url=base_url,
+            timeout=model_config.get("timeout", 30) if model_config else 30
         )
         self.model = model
         self.schema_manager = SchemaManager()
-        self.dialect = "hive"  # 默认方言
+        self.dialect = "hive"
+        self.model_config = model_config or {"max_tokens": 2000}
         
     def set_dialect(self, dialect: str) -> None:
         """设置SQL方言"""
@@ -34,12 +39,10 @@ class ChatManager:
         """获取系统提示词"""
         prompts = []
         
-        # 基础SQL助手提示
-        base_prompt = """You are an AI SQL assistant that helps users write and optimize SQL queries.
+        base_prompt = """You are an AI SQL assistant that helps write and optimize SQL queries.
         You have deep knowledge of SQL and database concepts."""
         prompts.append(base_prompt)
         
-        # SQL编写指南
         sql_guidelines = """
         When writing SQL:
         1. Follow SQL best practices for readability and performance
@@ -49,14 +52,10 @@ class ChatManager:
         5. Validate against schema when available"""
         prompts.append(sql_guidelines)
         
-        # 方言特定提示
-        dialect_prompt = DialectManager.get_dialect_prompt(self.dialect)
-        if dialect_prompt:
+        if dialect_prompt := DialectManager.get_dialect_prompt(self.dialect):
             prompts.append(f"Current SQL dialect: {self.dialect.upper()}\n{dialect_prompt}")
         
-        # Schema信息
-        schema_prompt = self.schema_manager.get_schema_prompt()
-        if schema_prompt:
+        if schema_prompt := self.schema_manager.get_schema_prompt():
             prompts.append(schema_prompt)
         
         return "\n\n".join(prompts)
@@ -75,28 +74,45 @@ class ChatManager:
                 model=self.model,
                 messages=messages,
                 stream=stream,
-                temperature=0.7,
-                max_tokens=2000
+                max_tokens=self.model_config.get("max_tokens", 2000)
             )
             
             if stream:
                 def response_generator():
-                    collected_messages = []
+                    reasoning_content = []
+                    content = []
+                    current_type = "reasoning"
+                    
                     for chunk in response:
-                        if chunk.choices[0].delta.content:
+                        if chunk.choices[0].delta.reasoning_content:
+                            content = chunk.choices[0].delta.reasoning_content
+                            reasoning_content.append(content)
+                            if current_type == "reasoning":
+                                yield "思考过程：\n" if len(reasoning_content) == 1 else content
+                        else:
                             content = chunk.choices[0].delta.content
-                            collected_messages.append(content)
-                            yield content
+                            if content:
+                                if current_type == "reasoning":
+                                    yield "\n\n生成的SQL：\n"
+                                    current_type = "content"
+                                yield content
                     
                     # 记录完整响应
-                    full_response = "".join(collected_messages)
+                    full_response = {
+                        "reasoning": "".join(reasoning_content),
+                        "content": "".join(content)
+                    }
                     logger.info(f"Received complete response from API:\n{full_response}")
                 
                 return response_generator()
             else:
                 content = response.choices[0].message.content
-                logger.info(f"Received response from API:\n{content}")
-                return {"content": content}
+                reasoning = response.choices[0].message.reasoning_content
+                logger.info(f"Received response from API:\n{content}\nReasoning:\n{reasoning}")
+                return {
+                    "content": content,
+                    "reasoning": reasoning
+                }
             
         except Exception as e:
             logger.error(f"Error calling API: {str(e)}")
