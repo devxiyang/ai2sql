@@ -15,7 +15,11 @@ An AI-powered SQL IDE that converts natural language to SQL queries.
 
 2. **Tool System (`core/tools/`)**
    - Provides function calling capabilities for AI
-   - SQL analysis and validation tools
+   - SQL analysis and validation tools:
+     - SQL structure analysis
+     - Schema validation
+     - Complexity scoring
+     - Query formatting
    - Extensible tool registry system
 
 3. **Rule Engine (`core/rules/`)**
@@ -212,3 +216,84 @@ MIT License
 3. Commit your changes
 4. Push to the branch
 5. Create a Pull Request 
+
+## SQL Tools
+
+### SQL Analysis
+The system provides comprehensive SQL analysis tools powered by sqlglot:
+
+```python
+analysis = sql_analyzer.analyze(sql_query)
+```
+
+Analysis includes:
+1. **Structure Analysis**
+   - Tables used
+   - Columns referenced
+   - JOIN types
+   - WHERE conditions
+   - Aggregation functions
+
+2. **Schema Validation**
+   - Table existence check
+   - Column existence check
+   - Relationship validation
+
+3. **Complexity Scoring**
+   Points are assigned based on:
+   - Number of tables (+2 each)
+   - Number of JOINs (+3 each)
+   - Number of conditions (+1 each)
+   - Number of aggregations (+2 each)
+   - Number of subqueries (+5 each)
+
+### SQL Formatting
+```python
+# Format SQL with proper indentation
+formatted_sql = sql_analyzer.format_sql(sql_query, dialect="mysql")
+
+# Display SQL with syntax highlighting
+sql_analyzer.display_sql(sql_query)
+```
+
+### Tool Integration
+Tools are available to the AI through function calling:
+
+```json
+{
+  "name": "analyze_sql",
+  "description": "Analyze SQL query structure and complexity",
+  "parameters": {
+    "sql": "SQL query to analyze",
+    "dialect": "SQL dialect (mysql, postgresql, etc.)"
+  }
+}
+```
+
+```json
+{
+  "name": "validate_schema",
+  "description": "Validate SQL query against loaded schema",
+  "parameters": {
+    "sql": "SQL query to validate"
+  }
+}
+```
+
+### Example Output
+```python
+{
+  "structure": {
+    "tables": ["users", "orders"],
+    "columns": {
+      "users": ["id", "name"],
+      "orders": ["user_id", "total"]
+    },
+    "joins": ["INNER"],
+    "conditions": ["users.id = orders.user_id"],
+    "aggregations": ["SUM(total)"]
+  },
+  "complexity": 8,
+  "schema_issues": []
+}
+``` 
