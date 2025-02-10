@@ -1,33 +1,34 @@
 [tool.poetry]
 name = "ai2sql"
 version = "0.1.0"
-description = "An AI-powered SQL IDE that converts natural language to SQL queries"
+description = "AI-powered SQL IDE that converts natural language to SQL queries"
 authors = ["Your Name <your.email@example.com>"]
 readme = "README.md"
 packages = [{include = "ai2sql"}]
 
 [tool.poetry.dependencies]
 python = ">=3.8.1,<4.0"
-openai = "^1.0.0"
-sqlglot = ">=11.0.0"
-click = "^8.1.3"
-rich = "^13.3.0"
-pyyaml = "^6.0"
+openai = "^1.12.0"
+sqlglot = "^26.1.1"
+click = "^8.1.7"
+rich = "^13.7.0"
+pyyaml = "^6.0.1"
+python-dotenv = "^1.0.1"
 
-[tool.poetry.dev-dependencies]
-pytest = "^7.3.1"
-pytest-asyncio = "^0.21.0"
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0.1"
 pytest-cov = "^4.1.0"
-black = "^23.3.0"
-isort = "^5.12.0"
-flake8 = "^6.0.0"
-
-[build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+black = "^24.2.0"
+isort = "^5.13.2"
+mypy = "^1.8.0"
 
 [tool.poetry.scripts]
-ai2sql = "ai2sql.__main__:cli"
+ai2sql = "ai2sql.cli:cli"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v --cov=ai2sql --cov-report=term-missing"
 
 [tool.black]
 line-length = 88
@@ -38,7 +39,6 @@ include = '\.pyi?$'
 profile = "black"
 multi_line_output = 3
 
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-python_files = ["test_*.py"]
-addopts = "-v --cov=ai2sql --cov-report=term-missing" 
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api" 

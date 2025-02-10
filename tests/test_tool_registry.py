@@ -16,4 +16,26 @@ def test_tool_registration():
     # Verify tool execution
     tool = registry.get_tool('test_tool')
     assert tool is not None
-    assert tool['function']() == "test result" 
+    assert tool['function']() == "test result"
+
+def test_register_analyzer():
+    registry = ToolRegistry()
+    
+    class MockAnalyzer:
+        def analyze(self, sql: str):
+            return "分析结果"
+    
+    analyzer = MockAnalyzer()
+    registry.register_analyzer("mock_analyzer", analyzer)
+    
+    assert registry.get_analyzer("mock_analyzer") == analyzer
+    assert "mock_analyzer" in registry.list_analyzers()
+
+def test_register_invalid_analyzer():
+    registry = ToolRegistry()
+    
+    class InvalidAnalyzer:
+        pass
+    
+    with pytest.raises(ValueError):
+        registry.register_analyzer("invalid", InvalidAnalyzer()) 

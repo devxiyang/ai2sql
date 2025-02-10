@@ -1,0 +1,9 @@
+model: "deepseek-chat"
+base_url: "https://api.deepseek.com"
+dialect: "hive"
+theme: "monokai"
+sql:
+  default_database: "test_db"
+  max_rows: 100
+  timeout: 10
+  show_execution_plan: true 
