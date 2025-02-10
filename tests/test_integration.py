@@ -1,5 +1,6 @@
 import pytest
 from pathlib import Path
+import os
 from ai2sql.core.chat import ChatManager
 from ai2sql.utils.config import Config
 
@@ -9,14 +10,18 @@ def chat_manager():
     config.load_config()
     
     manager = ChatManager(
-        api_key=config.get("openai_api_key", "test-key"),
-        model="deepseek-r1",
-        dialect="hive"
+        api_key=config.get("api_key") or os.getenv("API_KEY"),
+        model=config.get("model"),
+        base_url=config.get("base_url")
     )
     
     # 加载测试schema
     schema_path = Path(__file__).parent / "data" / "test_schema.yml"
-    manager.schema_manager.load_schema_file(schema_path)
+    if schema_path.exists():
+        manager.schema_manager.load_schema_file(str(schema_path))
+    
+    # 设置方言
+    manager.set_dialect("hive")
     
     return manager
 
@@ -26,7 +31,6 @@ def test_simple_query(chat_manager):
     
     assert "error" not in response
     assert response["content"] is not None
-    # 检查响应中是否包含SQL相关内容
     content = response["content"].lower()
     assert "select" in content
     assert "from users" in content
@@ -95,4 +99,99 @@ def test_error_handling(chat_manager, monkeypatch):
     response = chat_manager.generate_response("查询用户数据")
     assert "error" in response
     assert "details" in response
-    assert "API Error" in response["details"] 
+    assert "API Error" in response["details"]
+
+def test_with_schema_reference(chat_manager):
+    """测试引用schema中的列信息"""
+    response = chat_manager.generate_response(
+        "查询订单金额大于1000且用户状态为1的用户名和订单信息"
+    )
+    
+    content = response["content"].lower()
+    assert "order_amount > 1000" in content
+    assert "status = 1" in content
+    assert "username" in content
+    assert "join" in content
+
+def test_with_partition(chat_manager):
+    """测试分区查询"""
+    response = chat_manager.generate_response(
+        "查询2024年1月份每个用户的订单总金额"
+    )
+    
+    content = response["content"].lower()
+    assert "dt" in content
+    assert "2024-01" in content
+    assert "sum" in content
+    assert "group by" in content
+
+def test_complex_aggregation(chat_manager):
+    """测试复杂聚合查询"""
+    response = chat_manager.generate_response(
+        "统计每个用户的订单数量、平均订单金额、最大订单金额和最近一笔订单时间"
+    )
+    
+    content = response["content"].lower()
+    assert "count" in content
+    assert "avg" in content
+    assert "max" in content
+    assert "created_at" in content
+    assert "group by" in content
+
+def test_subquery(chat_manager):
+    """测试子查询"""
+    response = chat_manager.generate_response(
+        "查询下过订单的用户中，订单总金额最高的前10名用户信息"
+    )
+    
+    content = response["content"].lower()
+    assert "select" in content
+    assert "sum" in content
+    assert "order by" in content
+    assert "limit 10" in content
+
+def test_window_function(chat_manager):
+    """测试窗口函数"""
+    response = chat_manager.generate_response(
+        "计算每个用户的订单金额占总订单金额的百分比"
+    )
+    
+    content = response["content"].lower()
+    assert "sum" in content
+    assert "over" in content
+    assert "partition by" in content
+
+def test_complex_conditions(chat_manager):
+    """测试复杂条件组合"""
+    response = chat_manager.generate_response(
+        "查询最近30天内，每天下单次数超过3次且单笔订单金额都大于1000的用户"
+    )
+    
+    content = response["content"].lower()
+    assert "having" in content
+    assert "count" in content
+    assert "> 3" in content
+    assert "order_amount > 1000" in content
+    assert "dt" in content
+
+def test_dialect_specific_features(chat_manager):
+    """测试Hive特定功能"""
+    response = chat_manager.generate_response(
+        "统计每个分区下的订单数量和总金额"
+    )
+    
+    content = response["content"].lower()
+    assert "dt" in content
+    assert "group by dt" in content
+    assert "sum" in content
+    assert "count" in content
+
+def test_schema_constraints(chat_manager):
+    """测试schema约束处理"""
+    response = chat_manager.generate_response(
+        "查询所有必填字段的值"
+    )
+    
+    content = response["content"].lower()
+    assert "user_id" in content  # user_id 是非空字段
+    assert "order_id" in content  # order_id 是非空字段 

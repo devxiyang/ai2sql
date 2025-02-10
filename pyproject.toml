@@ -28,7 +28,7 @@ ai2sql = "ai2sql.cli:cli"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
-addopts = "-v --cov=ai2sql --cov-report=term-missing"
+addopts = "-v -B --cov=ai2sql --cov-report=term-missing"
 
 [tool.black]
 line-length = 88

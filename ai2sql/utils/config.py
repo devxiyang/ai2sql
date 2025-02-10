@@ -8,19 +8,9 @@ class Config:
     def __init__(self):
         self.config: Dict[str, Any] = {
             "model": "deepseek-chat",
-            "base_url": "https://api.deepseek.com",
+            "base_url": "https://api.deepseek.com/v1",
             "dialect": "hive",
-            "history_size": 1000,
-            "theme": "monokai",
-            "temperature": 0.7,
-            "max_tokens": 2000,
-            # 通用SQL配置
-            "sql": {
-                "default_database": "default",
-                "max_rows": 1000,
-                "timeout": 30,
-                "show_execution_plan": True
-            }
+            "theme": "monokai"
         }
         
     def load_config(self) -> None:
@@ -55,30 +45,16 @@ class Config:
     def _load_env_vars(self) -> None:
         """加载环境变量配置"""
         env_mapping = {
-            # API配置
-            "DEEPSEEK_API_KEY": "api_key",
-            "AI2SQL_BASE_URL": "base_url",
-            
-            # 模型配置
-            "AI2SQL_MODEL": "model",
-            "AI2SQL_DIALECT": "dialect",
-            
-            # UI配置
-            "AI2SQL_THEME": "theme",
-            "AI2SQL_HISTORY_SIZE": "history_size",
-            
-            # 日志配置
-            "LOG_LEVEL": "log_level"
+            "API_KEY": "api_key",
+            "API_BASE_URL": "base_url",
+            "API_MODEL": "model",
+            "SQL_DIALECT": "dialect"
         }
         
         for env_var, config_key in env_mapping.items():
             if value := os.getenv(env_var):
                 self.config[config_key] = value
                 
-        # 设置日志级别
-        if log_level := self.config.get("log_level"):
-            logging.basicConfig(level=getattr(logging, log_level.upper()))
-        
     def get(self, key: str, default: Any = None) -> Any:
         """获取配置值"""
         return self.config.get(key, default) 

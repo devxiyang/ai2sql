@@ -1,40 +1,42 @@
 tables:
   - name: users
-    comment: "用户信息表"
+    comment: 用户表
     columns:
       - name: user_id
         type: bigint
-        nullable: false
-        comment: "用户ID"
+        comment: 用户ID
+        not_null: true
       - name: username
-        type: varchar(50)
-        comment: "用户名"
+        type: string
+        comment: 用户名
+        not_null: true
       - name: created_at
         type: timestamp
-        comment: "创建时间"
+        comment: 创建时间
       - name: status
         type: int
-        comment: "用户状态"
+        comment: 用户状态(1:正常,0:禁用)
 
   - name: orders
-    comment: "订单表"
+    comment: 订单表
     columns:
       - name: order_id
         type: bigint
-        nullable: false
-        comment: "订单ID"
+        comment: 订单ID
+        not_null: true
       - name: user_id
         type: bigint
-        comment: "用户ID"
+        comment: 用户ID
+        not_null: true
       - name: order_amount
         type: decimal(10,2)
-        comment: "订单金额"
-      - name: order_status
-        type: int
-        comment: "订单状态"
+        comment: 订单金额
       - name: created_at
         type: timestamp
-        comment: "创建时间"
+        comment: 创建时间
+      - name: order_status
+        type: int
+        comment: 订单状态(1:已完成,0:进行中,-1:已取消)
       - name: dt
         type: string
-        comment: "分区字段-日期" 
+        comment: 分区字段(格式:yyyy-MM-dd) 
