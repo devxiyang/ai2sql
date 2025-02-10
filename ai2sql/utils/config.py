@@ -15,6 +15,9 @@ class Config:
         
     def load_config(self) -> None:
         """加载配置文件"""
+        # 加载环境变量（优先级最高）
+        self._load_env_vars()
+        
         # 加载默认配置
         package_config = self._load_yaml("default_config.yml")
         if package_config:
@@ -31,7 +34,7 @@ class Config:
         if project_config:
             self.config.update(project_config)
             
-        # 加载环境变量
+        # 再次加载环境变量以确保它们有最高优先级
         self._load_env_vars()
         
     def _load_yaml(self, path: Union[str, Path]) -> Dict[str, Any]:

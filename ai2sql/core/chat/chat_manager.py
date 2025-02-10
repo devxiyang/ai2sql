@@ -1,14 +1,20 @@
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Generator, Union
 from openai import OpenAI
 from ..dialects import DialectManager
 from ..schema.schema_manager import SchemaManager
 import logging
+import os
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class ChatManager:
-    def __init__(self, api_key: str, model: str = "deepseek-chat", base_url: str = "https://api.deepseek.com/v1"):
+    def __init__(self, api_key: Optional[str] = None, model: str = "deepseek-chat", base_url: str = "https://api.deepseek.com/v1"):
+        if not api_key:
+            api_key = os.getenv("API_KEY") or os.getenv("OPENAI_API_KEY")
+            if not api_key:
+                raise ValueError("API key must be provided either through constructor or environment variables (API_KEY or OPENAI_API_KEY)")
+            
         self.client = OpenAI(
             api_key=api_key,
             base_url=base_url
@@ -55,7 +61,7 @@ class ChatManager:
         
         return "\n\n".join(prompts)
         
-    def generate_response(self, user_input: str) -> Dict[str, Any]:
+    def generate_response(self, user_input: str, stream: bool = True) -> Union[Dict[str, Any], Generator[str, None, None]]:
         """生成AI响应"""
         messages = [
             {"role": "system", "content": self.get_system_prompt()},
@@ -68,16 +74,29 @@ class ChatManager:
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=messages,
-                stream=False,
+                stream=stream,
                 temperature=0.7,
                 max_tokens=2000
             )
             
-            logger.info(f"Received response from API:\n{response.choices[0].message.content}")
-            
-            return {
-                "content": response.choices[0].message.content,
-            }
+            if stream:
+                def response_generator():
+                    collected_messages = []
+                    for chunk in response:
+                        if chunk.choices[0].delta.content:
+                            content = chunk.choices[0].delta.content
+                            collected_messages.append(content)
+                            yield content
+                    
+                    # 记录完整响应
+                    full_response = "".join(collected_messages)
+                    logger.info(f"Received complete response from API:\n{full_response}")
+                
+                return response_generator()
+            else:
+                content = response.choices[0].message.content
+                logger.info(f"Received response from API:\n{content}")
+                return {"content": content}
             
         except Exception as e:
             logger.error(f"Error calling API: {str(e)}")

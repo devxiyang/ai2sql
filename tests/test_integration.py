@@ -195,3 +195,13 @@ def test_schema_constraints(chat_manager):
     content = response["content"].lower()
     assert "user_id" in content  # user_id 是非空字段
     assert "order_id" in content  # order_id 是非空字段 
+
+def test_stream_response(chat_manager):
+    """测试流式输出"""
+    chunks = []
+    for chunk in chat_manager.generate_response("查询用户表的所有数据", stream=True):
+        chunks.append(chunk)
+    
+    full_response = "".join(chunks)
+    assert "select" in full_response.lower()
+    assert "from users" in full_response.lower() 
