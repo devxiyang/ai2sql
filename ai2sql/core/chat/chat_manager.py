@@ -96,7 +96,11 @@ class ChatManager:
                 model=self.model,
                 messages=messages,
                 stream=stream,
-                max_tokens=self.model_config.get("max_tokens", 2000)
+                max_tokens=self.model_config.get("max_tokens", 4000),
+                temperature=self.model_config.get("temperature", 0.7),
+                top_p=self.model_config.get("top_p", 0.9),
+                presence_penalty=self.model_config.get("presence_penalty", 0.1),
+                frequency_penalty=self.model_config.get("frequency_penalty", 0.1)
             )
             
             if stream:
@@ -106,26 +110,30 @@ class ChatManager:
                     current_type = "reasoning"
                     
                     for chunk in response:
-                        if chunk.choices[0].delta.reasoning_content:
-                            content = chunk.choices[0].delta.reasoning_content
+                        if not chunk.choices:
+                            continue
+                            
+                        delta = chunk.choices[0].delta
+                        if hasattr(delta, 'reasoning_content') and delta.reasoning_content:
+                            content = delta.reasoning_content
                             reasoning_content.append(content)
                             if current_type == "reasoning":
                                 yield "思考过程：\n" if len(reasoning_content) == 1 else content
-                        else:
-                            content = chunk.choices[0].delta.content
-                            if content:
-                                sql_content.append(content)
-                                if current_type == "reasoning":
-                                    yield "\n\n生成的SQL：\n"
-                                    current_type = "content"
-                                yield content
+                        elif hasattr(delta, 'content') and delta.content:
+                            content = delta.content
+                            sql_content.append(content)
+                            if current_type == "reasoning":
+                                yield "\n\n生成的SQL：\n"
+                                current_type = "content"
+                            yield content
                     
                     # 保存SQL到文件
                     if save_sql and sql_content:
                         sql = "".join(sql_content)
-                        description = user_input
-                        filepath = self.sql_writer.write_sql(sql, description)
-                        yield f"\n\nSQL已保存到文件: {filepath}"
+                        if sql.strip():  # 确保SQL不为空
+                            description = user_input
+                            filepath = self.sql_writer.write_sql(sql, description)
+                            yield f"\n\nSQL已保存到文件: {filepath}"
                     
                     # 记录完整响应
                     full_response = {
@@ -137,10 +145,10 @@ class ChatManager:
                 return response_generator()
             else:
                 content = response.choices[0].message.content
-                reasoning = response.choices[0].message.reasoning_content
+                reasoning = getattr(response.choices[0].message, 'reasoning_content', '')
                 
                 # 保存SQL到文件
-                if save_sql and content:
+                if save_sql and content and content.strip():
                     filepath = self.sql_writer.write_sql(content, user_input)
                     logger.info(f"SQL saved to: {filepath}")
                 

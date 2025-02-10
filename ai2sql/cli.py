@@ -53,9 +53,11 @@ def chat(schema: str, dialect: str, api_key: str, timeout: int,
     # 构建模型配置
     model_config = {
         "temperature": temperature or config.get("model", "temperature", default=0.7),
-        "max_tokens": max_tokens or config.get("model", "max_tokens", default=2000),
+        "max_tokens": max_tokens or config.get("model", "max_tokens", default=4000),
         "top_p": top_p or config.get("model", "top_p", default=0.9),
-        "timeout": config.get("model", "timeout", default=30)
+        "timeout": config.get("model", "timeout", default=60),
+        "presence_penalty": 0.1,
+        "frequency_penalty": 0.1,
     }
     
     try:
@@ -63,7 +65,8 @@ def chat(schema: str, dialect: str, api_key: str, timeout: int,
             api_key=api_key or config.get("api", "key"),
             model=config.get("api", "model", default="deepseek-reasoner"),
             base_url=config.get("api", "base_url", default="https://api.deepseek.com/v1"),
-            model_config=model_config
+            model_config=model_config,
+            sql_output_dir="generated_sql"
         )
         
         if schema:
