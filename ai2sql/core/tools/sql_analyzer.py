@@ -64,37 +64,4 @@ class SQLAnalyzer:
         except (ParseError, TokenError) as e:
             raise ValueError(f"SQL解析错误: {str(e)}")
         except Exception as e:
-            raise ValueError(f"SQL格式化错误: {str(e)}")
-
-    def translate(self, sql_query: str, from_dialect: str, to_dialect: str) -> str:
-        """
-        在不同SQL方言间转换
-        """
-        if not sql_query or not sql_query.strip():
-            raise ValueError("SQL语句不能为空")
-            
-        try:
-            # 尝试解析
-            try:
-                parsed = sqlglot.parse_one(sql_query, read=from_dialect)
-            except (ParseError, TokenError) as e:
-                raise ValueError(f"SQL解析错误: {str(e)}")
-                
-            if not parsed:
-                raise ValueError("无法解析SQL语句")
-            
-            # 尝试转换
-            try:
-                result = parsed.sql(dialect=to_dialect)
-            except Exception as e:
-                raise ValueError(f"方言转换错误: {str(e)}")
-                
-            if not result:
-                raise ValueError("转换结果为空")
-                
-            return result
-            
-        except ValueError as e:
-            raise e
-        except Exception as e:
-            raise ValueError(f"SQL转换错误: {str(e)}") 
+            raise ValueError(f"SQL格式化错误: {str(e)}") 

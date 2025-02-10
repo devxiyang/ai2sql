@@ -38,24 +38,4 @@ def test_format_error_handling():
     analyzer = SQLAnalyzer()
     
     with pytest.raises(ValueError):
-        analyzer.format_sql("NOT A SQL QUERY")
-
-def test_dialect_translation():
-    analyzer = SQLAnalyzer()
-    mysql_sql = "SELECT `id`, `name` FROM `users` LIMIT 5"
-    
-    # 转换到 PostgreSQL
-    pg_sql = analyzer.translate(mysql_sql, 'mysql', 'postgres')
-    assert '"id"' in pg_sql  # PostgreSQL 使用双引号
-    assert '"name"' in pg_sql
-    assert '"users"' in pg_sql
-    
-    # 转换到 SQLite
-    sqlite_sql = analyzer.translate(mysql_sql, 'mysql', 'sqlite')
-    assert '`' not in sqlite_sql  # SQLite 不使用反引号
-
-def test_translation_error_handling():
-    analyzer = SQLAnalyzer()
-    
-    with pytest.raises(ValueError):
-        analyzer.translate("NOT A SQL", 'mysql', 'postgres') 
+        analyzer.format_sql("NOT A SQL QUERY") 
