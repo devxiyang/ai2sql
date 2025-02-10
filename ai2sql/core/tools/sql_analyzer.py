@@ -1,9 +1,5 @@
-from typing import Dict, Any, List, Set
+from typing import Dict, Any
 import sqlglot
-from sqlglot.expressions import (
-    Select, Join, Where, Group, Having, Table, Column,
-    Anonymous, Func
-)
 
 class SQLAnalyzer:
     def __init__(self):
@@ -11,23 +7,29 @@ class SQLAnalyzer:
     
     def analyze(self, sql_query: str, dialect: str = "mysql") -> Dict[str, Any]:
         """
-        分析SQL查询结构和复杂度
+        分析SQL查询并返回解析结果
         """
         try:
             # 解析SQL
             parsed = sqlglot.parse_one(sql_query, dialect)
             
-            # 收集基本信息
-            analysis = {
-                'tables': self._extract_tables(parsed),
-                'columns': self._extract_columns(parsed),
-                'conditions': self._extract_conditions(parsed)
+            # 返回基本信息
+            return {
+                'parsed': str(parsed),          # 解析树
+                'formatted': parsed.sql(pretty=True),  # 格式化的SQL
+                'dialect': dialect,             # SQL方言
+                'is_valid': True,              # 是否有效
+                'tokens': parsed.tokens,        # SQL标记
+                'type': parsed.key             # SQL类型(SELECT/INSERT等)
             }
             
-            return analysis
-            
         except Exception as e:
-            raise ValueError(f"SQL分析错误: {str(e)}")
+            return {
+                'parsed': None,
+                'dialect': dialect,
+                'is_valid': False,
+                'error': str(e)
+            }
     
     def format_sql(self, sql_query: str, dialect: str = "mysql") -> str:
         """
@@ -38,36 +40,13 @@ class SQLAnalyzer:
             return parsed.sql(pretty=True, dialect=dialect)
         except Exception as e:
             raise ValueError(f"SQL格式化错误: {str(e)}")
-    
-    def _extract_tables(self, parsed) -> Set[str]:
+
+    def translate(self, sql_query: str, from_dialect: str, to_dialect: str) -> str:
         """
-        提取查询中使用的表
+        在不同SQL方言间转换
         """
-        tables = set()
-        for exp in parsed.walk():
-            if isinstance(exp, Table):
-                tables.add(exp.name)
-        return tables
-    
-    def _extract_columns(self, parsed) -> Dict[str, List[str]]:
-        """
-        提取查询中使用的列及其所属表
-        """
-        columns = {}
-        for exp in parsed.walk():
-            if isinstance(exp, Column):
-                table = exp.table or 'unknown'
-                if table not in columns:
-                    columns[table] = []
-                columns[table].append(exp.name)
-        return columns
-    
-    def _extract_conditions(self, parsed) -> List[str]:
-        """
-        提取WHERE条件
-        """
-        conditions = []
-        for exp in parsed.walk():
-            if isinstance(exp, Where):
-                conditions.append(str(exp.this))
-        return conditions 
+        try:
+            parsed = sqlglot.parse_one(sql_query, read=from_dialect)
+            return parsed.sql(dialect=to_dialect)
+        except Exception as e:
+            raise ValueError(f"SQL转换错误: {str(e)}") 
