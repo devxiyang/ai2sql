@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
@@ -8,11 +8,16 @@ interface SQLMessageProps {
 }
 
 const SQLMessage: React.FC<SQLMessageProps> = ({ sql, onCopy }) => {
+  const [copied, setCopied] = useState(false);
+
   const handleCopy = () => {
     navigator.clipboard.writeText(sql).then(() => {
+      setCopied(true);
       if (onCopy) {
         onCopy();
       }
+      // Reset copied state after 2 seconds
+      setTimeout(() => setCopied(false), 2000);
     }).catch(console.error);
   };
 
@@ -40,13 +45,12 @@ const SQLMessage: React.FC<SQLMessageProps> = ({ sql, onCopy }) => {
   };
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col my-2 border rounded-md overflow-hidden" style={{
+      borderColor: 'var(--vscode-panel-border)',
+    }}>
       {/* File info bar */}
       <div className="flex items-center justify-between px-2 py-1 text-xs" style={{
         backgroundColor: 'var(--vscode-tab-inactiveBackground)',
-        borderTopLeftRadius: '6px',
-        borderTopRightRadius: '6px',
-        borderBottom: '1px solid var(--vscode-panel-border)',
       }}>
         <div className="flex items-center gap-2">
           <span style={{ color: 'var(--vscode-tab-inactiveForeground)' }}>
@@ -56,16 +60,17 @@ const SQLMessage: React.FC<SQLMessageProps> = ({ sql, onCopy }) => {
         <div className="flex items-center">
           <button
             onClick={handleCopy}
-            className="px-2 py-0.5 opacity-0 hover:opacity-100 transition-opacity"
+            className="flex items-center gap-1 px-2 py-0.5 rounded hover:bg-[var(--vscode-button-hoverBackground)] transition-colors"
             style={{
               color: 'var(--vscode-tab-inactiveForeground)',
-              background: 'none',
+              background: copied ? 'var(--vscode-button-background)' : 'none',
               border: 'none',
               cursor: 'pointer',
               fontSize: 'inherit',
             }}
           >
-            Copy
+            <span className="codicon codicon-copy" style={{ fontSize: '12px' }}></span>
+            {copied ? 'Copied!' : 'Copy'}
           </button>
         </div>
       </div>
@@ -73,8 +78,6 @@ const SQLMessage: React.FC<SQLMessageProps> = ({ sql, onCopy }) => {
       {/* Code content */}
       <div className="p-4" style={{
         backgroundColor: 'var(--vscode-editor-background)',
-        borderBottomLeftRadius: '6px',
-        borderBottomRightRadius: '6px',
       }}>
         <SyntaxHighlighter
           language="sql"
