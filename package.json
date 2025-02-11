@@ -10,11 +10,29 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:ai2sql.generateSQL",
-    "onCommand:ai2sql.optimizeSQL"
+    "onView:ai2sql.chatView"
   ],
   "main": "./dist/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "ai2sql-sidebar",
+          "title": "AI2SQL",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "ai2sql-sidebar": [
+        {
+          "type": "webview",
+          "id": "ai2sql.chatView",
+          "name": "Chat",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "ai2sql.generateSQL",
