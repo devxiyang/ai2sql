@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
 import SQLMessage from './SQLMessage';
 
 interface ChatMessageProps {
@@ -77,14 +78,12 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isUser, timestamp, s
           {isSQL ? (
             <SQLMessage sql={message} streaming={streaming} />
           ) : (
-            <div className="relative" style={{
+            <div className="relative markdown-body" style={{
               color: isUser 
                 ? 'var(--vscode-button-foreground)' 
                 : 'var(--vscode-editor-foreground)',
               fontSize: 'var(--vscode-font-size, 13px)',
               fontFamily: 'var(--vscode-font-family)',
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word',
             }}>
               {isGenerating ? (
                 <div className="flex items-center">
@@ -93,8 +92,10 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isUser, timestamp, s
                 </div>
               ) : (
                 <>
-                  {message}
-                  {!isUser && !isSQL && streaming && (
+                  <ReactMarkdown>
+                    {message}
+                  </ReactMarkdown>
+                  {!isUser && streaming && (
                     <div 
                       className="absolute bottom-0 animate-pulse"
                       style={{

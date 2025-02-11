@@ -56,16 +56,22 @@ export class UnifiedAIService implements BaseAIService {
                 {
                     role: 'system',
                     content: `You are a SQL expert. Convert natural language to SQL queries.
-Format the SQL query with the following rules:
+For SQL queries, follow these rules:
 1. Use uppercase for SQL keywords (SELECT, FROM, WHERE, etc.)
 2. Each major clause (SELECT, FROM, WHERE, etc.) should start on a new line
 3. Use proper indentation (2 spaces) for sub-clauses and conditions
 4. Place each column/condition on a new line when there are multiple
 5. Add appropriate spacing around operators and parentheses
-6. Output ONLY the raw SQL query without any markdown formatting, explanations, or code blocks
-7. Do not use \`\`\` or any other markdown syntax
+6. Output the raw SQL query directly without any markdown formatting
 
-Example output:
+For explanations or additional information, use Markdown formatting:
+- Use **bold** for emphasis
+- Use \`code\` for table names, column names, or values
+- Use bullet points for lists
+- Use > for important notes
+- Use --- for separating sections
+
+Example SQL output:
 SELECT
   column1,
   column2,
@@ -82,7 +88,15 @@ WHERE
 GROUP BY
   column1
 ORDER BY
-  column2 DESC;`
+  column2 DESC;
+
+Example explanation output:
+This query will:
+- Join the \`users\` and \`orders\` tables
+- Filter by **active** users only
+- Sort by order date
+
+> Note: Make sure the indexes exist on join columns`
                 },
                 ...formattedHistory,
                 {
@@ -172,17 +186,27 @@ ORDER BY
                         {
                             role: "system",
                             content: `You are a SQL optimization expert. Optimize the given SQL query for better performance.
-Format the optimized SQL query with the following rules:
+
+For SQL queries, follow these rules:
 1. Use uppercase for SQL keywords (SELECT, FROM, WHERE, etc.)
 2. Each major clause (SELECT, FROM, WHERE, etc.) should start on a new line
 3. Use proper indentation (2 spaces) for sub-clauses and conditions
 4. Place each column/condition on a new line when there are multiple
 5. Add appropriate spacing around operators and parentheses
-6. Add comments to explain major optimization changes
-7. Only output the optimized SQL query with comments, no other explanations
 
-Example format:
--- Optimized query: Added index hint and reordered joins
+For optimization explanations, use Markdown formatting:
+- Use **bold** for key optimization points
+- Use \`code\` for table names, column names, or values
+- Use bullet points for listing changes
+- Use > for important notes
+- Use --- for separating sections
+
+Example output:
+> **Key Optimizations Applied**:
+- Added index hint on \`customer_id\`
+- Reordered joins for better performance
+- Added table aliases for readability
+
 SELECT
   t1.column1,
   t2.column2
@@ -197,7 +221,9 @@ WHERE
     SELECT column2
     FROM table3
     WHERE status = 'active'
-  );`
+  );
+
+> Note: Consider adding an index on \`table2.column2\` for better performance`
                         },
                         {
                             role: "user",
@@ -222,17 +248,27 @@ WHERE
                         {
                             role: "system",
                             content: `You are a SQL optimization expert. Optimize the given SQL query for better performance.
-Format the optimized SQL query with the following rules:
+
+For SQL queries, follow these rules:
 1. Use uppercase for SQL keywords (SELECT, FROM, WHERE, etc.)
 2. Each major clause (SELECT, FROM, WHERE, etc.) should start on a new line
 3. Use proper indentation (2 spaces) for sub-clauses and conditions
 4. Place each column/condition on a new line when there are multiple
 5. Add appropriate spacing around operators and parentheses
-6. Add comments to explain major optimization changes
-7. Only output the optimized SQL query with comments, no other explanations
 
-Example format:
--- Optimized query: Added index hint and reordered joins
+For optimization explanations, use Markdown formatting:
+- Use **bold** for key optimization points
+- Use \`code\` for table names, column names, or values
+- Use bullet points for listing changes
+- Use > for important notes
+- Use --- for separating sections
+
+Example output:
+> **Key Optimizations Applied**:
+- Added index hint on \`customer_id\`
+- Reordered joins for better performance
+- Added table aliases for readability
+
 SELECT
   t1.column1,
   t2.column2
@@ -247,7 +283,9 @@ WHERE
     SELECT column2
     FROM table3
     WHERE status = 'active'
-  );`
+  );
+
+> Note: Consider adding an index on \`table2.column2\` for better performance`
                         },
                         {
                             role: "user",
