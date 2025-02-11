@@ -7,15 +7,17 @@ export class UnifiedAIService implements BaseAIService {
     private model: string;
     private readonly MAX_HISTORY_MESSAGES = 10;  // Maximum number of history messages to include
     private readonly MAX_HISTORY_TOKENS = 2000;  // Maximum tokens for history messages
-    private readonly STREAM_TIMEOUT = 60000;     // 60 seconds timeout for streaming
-    private readonly INITIAL_CHUNK_TIMEOUT = 30000;  // 30 seconds timeout for first chunk
-    private readonly CHUNK_TIMEOUT = 10000;      // 10 seconds timeout for subsequent chunks
+    private readonly STREAM_TIMEOUT = 1800000;   // 30 minutes timeout for streaming (Deepseek max)
+    private readonly INITIAL_CHUNK_TIMEOUT = 120000;  // 2 minutes timeout for first chunk
+    private readonly CHUNK_TIMEOUT = 30000;      // 30 seconds timeout for subsequent chunks
+    private readonly RETRY_COUNT = 3;            // Number of retries for failed requests
 
     constructor(config: BaseAIServiceConfig) {
         this.client = new OpenAI({
             apiKey: config.apiKey,
             baseURL: config.baseURL,
             timeout: this.STREAM_TIMEOUT,
+            maxRetries: this.RETRY_COUNT,
         });
         this.model = config.model;
         console.log('AI service initialized with model:', this.model);
@@ -54,13 +56,37 @@ export class UnifiedAIService implements BaseAIService {
         let fullResponse = '';
         let lastChunkTime = Date.now();
         let isFirstChunk = true;
+        let emptyChunkCount = 0;
         
         try {
             for await (const chunk of stream) {
                 const currentTime = Date.now();
                 const timeoutLimit = isFirstChunk ? this.INITIAL_CHUNK_TIMEOUT : this.CHUNK_TIMEOUT;
                 
+                // Reset empty chunk counter if we got content
+                if (chunk.choices[0]?.delta?.content) {
+                    emptyChunkCount = 0;
+                } else {
+                    emptyChunkCount++;
+                    // Allow up to 10 empty chunks before considering it as potential timeout
+                    if (emptyChunkCount > 10) {
+                        console.log('Received too many empty chunks, may be server busy');
+                        if (currentTime - lastChunkTime > timeoutLimit) {
+                            if (fullResponse.trim()) {
+                                console.log('Returning partial response due to empty chunks');
+                                return fullResponse;
+                            }
+                            throw new Error(`Stream ${isFirstChunk ? 'initial' : 'chunk'} timeout: Server may be busy`);
+                        }
+                    }
+                    continue;  // Skip empty chunks
+                }
+                
                 if (currentTime - lastChunkTime > timeoutLimit) {
+                    if (fullResponse.trim()) {
+                        console.log('Returning partial response due to timeout');
+                        return fullResponse;
+                    }
                     throw new Error(`Stream ${isFirstChunk ? 'initial' : 'chunk'} timeout: No response received for ${timeoutLimit/1000} seconds`);
                 }
                 
