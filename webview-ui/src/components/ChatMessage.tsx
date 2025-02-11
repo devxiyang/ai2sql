@@ -21,6 +21,33 @@ const thinkingAnimationStyle = `
       opacity: 1;
     }
   }
+
+  .markdown-body table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 1em 0;
+    border: 1px solid var(--vscode-panel-border);
+  }
+
+  .markdown-body th {
+    background-color: var(--vscode-editor-inactiveSelectionBackground);
+    padding: 8px;
+    border: 1px solid var(--vscode-panel-border);
+    font-weight: bold;
+  }
+
+  .markdown-body td {
+    padding: 8px;
+    border: 1px solid var(--vscode-panel-border);
+  }
+
+  .markdown-body tr:nth-child(even) {
+    background-color: var(--vscode-list-hoverBackground);
+  }
+
+  .markdown-body tr:hover {
+    background-color: var(--vscode-list-activeSelectionBackground);
+  }
 `;
 
 // Add the style tag to the document head
