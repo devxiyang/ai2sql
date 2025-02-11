@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import SQLMessage from './SQLMessage';
 
 interface ChatMessageProps {
@@ -6,6 +6,19 @@ interface ChatMessageProps {
   isUser: boolean;
   timestamp?: string;
 }
+
+const LoadingDots = () => {
+  const [dots, setDots] = useState('');
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setDots(prev => prev.length >= 3 ? '' : prev + '.');
+    }, 500);
+    return () => clearInterval(interval);
+  }, []);
+
+  return <span className="inline-block min-w-[24px]">{dots}</span>;
+};
 
 const ChatMessage: React.FC<ChatMessageProps> = ({ message, isUser, timestamp }) => {
   const isSQL = !isUser && (
@@ -16,6 +29,8 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isUser, timestamp })
     message.includes('CREATE') ||
     message.includes('ALTER')
   ) && !message.includes('```');  // Exclude markdown formatted SQL
+
+  const isGenerating = message === 'Generating SQL...';
 
   return (
     <div className="px-4 py-2 hover:bg-[var(--vscode-list-hoverBackground)]">
@@ -41,7 +56,14 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isUser, timestamp })
               whiteSpace: 'pre-wrap',
               wordBreak: 'break-word',
             }}>
-              {message}
+              {isGenerating ? (
+                <div className="flex items-center">
+                  <span>AI is crafting your SQL query</span>
+                  <LoadingDots />
+                </div>
+              ) : (
+                message
+              )}
             </div>
           )}
         </div>

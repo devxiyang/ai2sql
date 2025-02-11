@@ -56,12 +56,18 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ messages, currentResponse
           timestamp={message.timestamp}
         />
       ))}
-      {/* Show streaming response or loading state */}
-      {(isLoading || hasCurrentResponse) && (
+      {/* Show loading state or streaming response */}
+      {isLoading && !hasCurrentResponse && (
+        <ChatMessage
+          message="Generating SQL..."
+          isUser={false}
+          timestamp={new Date().toLocaleTimeString()}
+        />
+      )}
+      {hasCurrentResponse && (
         <SQLMessage
           sql={currentResponse}
-          loading={isLoading && !hasCurrentResponse}
-          streaming={hasCurrentResponse}
+          streaming={true}
         />
       )}
       <div ref={messagesEndRef} />
