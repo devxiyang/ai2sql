@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ChatContainer from './components/ChatContainer';
 import ChatInput from './components/ChatInput';
 import { Message, AIResponse } from './types/messages';
@@ -17,6 +17,7 @@ const App: React.FC = () => {
   ]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentResponse, setCurrentResponse] = useState<string>('');
+  const messageIdCounter = useRef(2);
 
   useEffect(() => {
     console.log('Setting up message event listener');
@@ -24,40 +25,36 @@ const App: React.FC = () => {
     const handleMessage = (event: MessageEvent) => {
       const message = event.data;
       
-      // VS Code webview messages come with a specific format
       if (message && message.type === 'response') {
         if (message.error) {
           console.error('Error in response:', message.error);
           setMessages(prev => [...prev, {
-            id: Date.now().toString(),
+            id: messageIdCounter.current.toString(),
             content: `Error: ${message.error}`,
             isUser: false,
             timestamp: new Date().toLocaleTimeString(),
           }]);
+          messageIdCounter.current += 1;
           setIsLoading(false);
           setCurrentResponse('');
-        } else if (message.content !== undefined) {  // Changed to check for undefined
+        } else if (message.content !== undefined) {
           if (message.streaming) {
-            // Update the current response for streaming
             setCurrentResponse(message.content);
           } else {
-            // This is the final message
             const finalContent = message.content || currentResponse;
             
             if (finalContent) {
-              // Add the message to the chat history
               setMessages(prev => [...prev, {
-                id: Date.now().toString(),
+                id: messageIdCounter.current.toString(),
                 content: finalContent,
                 isUser: false,
                 timestamp: new Date().toLocaleTimeString(),
               }]);
+              messageIdCounter.current += 1;
               
-              // Clear loading state and current response after a small delay
-              setTimeout(() => {
-                setIsLoading(false);
-                setCurrentResponse('');
-              }, 100);
+              // Clear loading state and current response
+              setIsLoading(false);
+              setCurrentResponse('');
             } else {
               setIsLoading(false);
               setCurrentResponse('');
@@ -72,20 +69,21 @@ const App: React.FC = () => {
     return () => {
       window.removeEventListener('message', handleMessage);
     };
-  }, [currentResponse]); // Add currentResponse to dependencies
+  }, [currentResponse]);
 
   const handleSendMessage = (content: string) => {
     if (!content.trim() || isLoading) return;
     
     // Add user message to chat
     setMessages(prev => [...prev, {
-      id: Date.now().toString(),
+      id: messageIdCounter.current.toString(),
       content: content,
       isUser: true,
       timestamp: new Date().toLocaleTimeString(),
     }]);
+    messageIdCounter.current += 1;
     
-    // Add a temporary loading message
+    // Reset state for new response
     setIsLoading(true);
     setCurrentResponse('');
 
@@ -94,7 +92,7 @@ const App: React.FC = () => {
       const message = {
         type: content.toLowerCase().includes('optimize') ? 'optimize' : 'generate',
         [content.toLowerCase().includes('optimize') ? 'sql' : 'prompt']: content,
-        stream: true,  // Enable streaming
+        stream: true,
         history: messages.map(msg => ({
           content: msg.content,
           isUser: msg.isUser
@@ -106,11 +104,12 @@ const App: React.FC = () => {
       setIsLoading(false);
       setCurrentResponse('');
       setMessages(prev => [...prev, {
-        id: Date.now().toString(),
+        id: messageIdCounter.current.toString(),
         content: `Error: ${error instanceof Error ? error.message : String(error)}`,
         isUser: false,
         timestamp: new Date().toLocaleTimeString(),
       }]);
+      messageIdCounter.current += 1;
     }
   };
 

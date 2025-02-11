@@ -20,12 +20,15 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ messages, currentResponse
   const hasCurrentResponse = currentResponse.trim().length > 0;
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messagesEndRef.current) {
+      const behavior = isLoading ? 'auto' : 'smooth';
+      messagesEndRef.current.scrollIntoView({ behavior });
+    }
   };
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, currentResponse]);
+  }, [messages, currentResponse, isLoading]);
 
   console.log('ChatContainer render:', {
     messagesCount: messages.length,
@@ -43,7 +46,7 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ messages, currentResponse
       upperContent.includes('DELETE') ||
       upperContent.includes('CREATE') ||
       upperContent.includes('ALTER')
-    );
+    ) && !content.includes('```');  // Exclude markdown formatted SQL
   };
 
   return (
@@ -70,14 +73,14 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ messages, currentResponse
         isSQL(currentResponse) ? (
           <SQLMessage
             sql={currentResponse}
-            streaming={true}
+            streaming={isLoading}
           />
         ) : (
           <ChatMessage
             message={currentResponse}
             isUser={false}
             timestamp={new Date().toLocaleTimeString()}
-            streaming={true}
+            streaming={isLoading}
           />
         )
       )}

@@ -7,11 +7,15 @@ export class UnifiedAIService implements BaseAIService {
     private model: string;
     private readonly MAX_HISTORY_MESSAGES = 10;  // Maximum number of history messages to include
     private readonly MAX_HISTORY_TOKENS = 2000;  // Maximum tokens for history messages
+    private readonly STREAM_TIMEOUT = 60000;     // 60 seconds timeout for streaming
+    private readonly INITIAL_CHUNK_TIMEOUT = 30000;  // 30 seconds timeout for first chunk
+    private readonly CHUNK_TIMEOUT = 10000;      // 10 seconds timeout for subsequent chunks
 
     constructor(config: BaseAIServiceConfig) {
         this.client = new OpenAI({
             apiKey: config.apiKey,
-            baseURL: config.baseURL
+            baseURL: config.baseURL,
+            timeout: this.STREAM_TIMEOUT,
         });
         this.model = config.model;
         console.log('AI service initialized with model:', this.model);
@@ -46,12 +50,59 @@ export class UnifiedAIService implements BaseAIService {
         return formattedMessages;
     }
 
+    private async handleStream(stream: AsyncIterable<OpenAI.Chat.ChatCompletionChunk>, onStream: (chunk: string) => void): Promise<string> {
+        let fullResponse = '';
+        let lastChunkTime = Date.now();
+        let isFirstChunk = true;
+        
+        try {
+            for await (const chunk of stream) {
+                const currentTime = Date.now();
+                const timeoutLimit = isFirstChunk ? this.INITIAL_CHUNK_TIMEOUT : this.CHUNK_TIMEOUT;
+                
+                if (currentTime - lastChunkTime > timeoutLimit) {
+                    throw new Error(`Stream ${isFirstChunk ? 'initial' : 'chunk'} timeout: No response received for ${timeoutLimit/1000} seconds`);
+                }
+                
+                const content = chunk.choices[0]?.delta?.content || '';
+                if (content) {
+                    if (isFirstChunk) {
+                        console.log('Received first chunk after', (currentTime - lastChunkTime)/1000, 'seconds');
+                        isFirstChunk = false;
+                    }
+                    fullResponse += content;
+                    try {
+                        onStream(fullResponse);
+                    } catch (callbackError) {
+                        console.error('Error in stream callback:', callbackError);
+                    }
+                }
+                lastChunkTime = currentTime;
+            }
+            
+            if (!fullResponse.trim()) {
+                throw new Error('No content generated in stream');
+            }
+            
+            return fullResponse;
+        } catch (error) {
+            console.error('Error in stream processing:', error);
+            if (fullResponse.trim()) {
+                console.log('Returning partial response:', fullResponse);
+                return fullResponse;
+            }
+            throw error;
+        }
+    }
+
     async generateSQL(prompt: string, onStream?: (chunk: string) => void, chatHistory: { content: string; isUser: boolean }[] = []): Promise<string> {
         console.log('Generating SQL with prompt:', prompt);
         console.log('Chat history length:', chatHistory.length);
         
         try {
             const formattedHistory = this.formatChatHistory(chatHistory);
+            console.log('Formatted history length:', formattedHistory.length);
+            
             const messages: ChatCompletionMessageParam[] = [
                 {
                     role: 'system',
@@ -106,56 +157,23 @@ This query will:
             ];
 
             if (onStream) {
-                let stream;
                 try {
-                    stream = await this.client.chat.completions.create({
+                    const stream = await this.client.chat.completions.create({
                         model: this.model,
                         messages,
                         temperature: 0.7,
                         stream: true,
                     });
-                } catch (createError) {
-                    console.error('Error creating stream:', createError);
-                    throw createError;
-                }
-
-                let fullResponse = '';
-                let lastChunkTime = Date.now();
-                const timeoutDuration = 30000; // 30 seconds timeout
-                
-                try {
-                    for await (const chunk of stream) {
-                        const currentTime = Date.now();
-                        if (currentTime - lastChunkTime > timeoutDuration) {
-                            throw new Error('Stream timeout: No response received for 30 seconds');
-                        }
-                        lastChunkTime = currentTime;
-                        
-                        const content = chunk.choices[0]?.delta?.content || '';
-                        if (content) {
-                            fullResponse += content;
-                            try {
-                                onStream(fullResponse);
-                            } catch (callbackError) {
-                                console.error('Error in stream callback:', callbackError);
-                                throw callbackError;
-                            }
-                        }
-                    }
                     
-                    if (!fullResponse) {
-                        const defaultSQL = 'SELECT\n  *\nFROM\n  example_table\nLIMIT 10;';
-                        console.log('No content generated, using default SQL');
-                        if (onStream) {
-                            onStream(defaultSQL);
-                        }
-                        return defaultSQL;
-                    }
-                    
-                    return fullResponse;
-                } catch (streamError) {
-                    console.error('Error processing stream:', streamError);
-                    throw streamError;
+                    return await this.handleStream(stream, onStream);
+                } catch (error) {
+                    console.error('Error in stream generation:', error);
+                    const errorMessage = error instanceof Error ? error.message : 'Failed to generate SQL';
+                    const userMessage = errorMessage.includes('timeout') ? 
+                        '> **Error**: The request timed out. Please try again.' :
+                        '> **Error**: Something went wrong. Please try again.';
+                    onStream(userMessage);
+                    return userMessage;
                 }
             } else {
                 const completion = await this.client.chat.completions.create({
@@ -180,12 +198,13 @@ This query will:
         console.log('Optimizing SQL:', sql);
         try {
             if (onStream) {
-                const stream = await this.client.chat.completions.create({
-                    model: this.model,
-                    messages: [
-                        {
-                            role: "system",
-                            content: `You are a SQL optimization expert. Optimize the given SQL query for better performance.
+                try {
+                    const stream = await this.client.chat.completions.create({
+                        model: this.model,
+                        messages: [
+                            {
+                                role: "system",
+                                content: `You are a SQL optimization expert. Optimize the given SQL query for better performance.
 
 For SQL queries, follow these rules:
 1. Use uppercase for SQL keywords (SELECT, FROM, WHERE, etc.)
@@ -224,23 +243,26 @@ WHERE
   );
 
 > Note: Consider adding an index on \`table2.column2\` for better performance`
-                        },
-                        {
-                            role: "user",
-                            content: `Optimize this SQL query: ${sql}`
-                        }
-                    ],
-                    temperature: 0.3,
-                    stream: true,
-                });
-
-                let fullResponse = '';
-                for await (const chunk of stream) {
-                    const content = chunk.choices[0]?.delta?.content || '';
-                    fullResponse += content;
-                    onStream(fullResponse);
+                            },
+                            {
+                                role: "user",
+                                content: `Optimize this SQL query: ${sql}`
+                            }
+                        ],
+                        temperature: 0.3,
+                        stream: true,
+                    });
+                    
+                    return await this.handleStream(stream, onStream);
+                } catch (error) {
+                    console.error('Error in stream optimization:', error);
+                    const errorMessage = error instanceof Error ? error.message : 'Failed to optimize SQL';
+                    const userMessage = errorMessage.includes('timeout') ? 
+                        '> **Error**: The request timed out. Please try again.' :
+                        '> **Error**: Something went wrong. Please try again.';
+                    onStream(userMessage);
+                    return userMessage;
                 }
-                return fullResponse;
             } else {
                 const completion = await this.client.chat.completions.create({
                     model: this.model,
