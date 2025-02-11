@@ -16,6 +16,15 @@ const SQLMessage: React.FC<SQLMessageProps> = ({ sql, onCopy }) => {
     }).catch(console.error);
   };
 
+  // Format SQL by removing extra spaces and normalizing line breaks
+  const formatSQL = (sql: string) => {
+    return sql
+      .replace(/\s+/g, ' ')  // Replace multiple spaces with single space
+      .replace(/\s*([,()])\s*/g, '$1 ')  // Add space after commas and parentheses
+      .replace(/\s+(FROM|WHERE|AND|OR|JOIN|LEFT|RIGHT|INNER|GROUP BY|ORDER BY|HAVING|LIMIT)\s+/gi, '\n$1 ')  // Add newlines before major clauses
+      .replace(/^\s+|\s+$/g, '');  // Trim leading/trailing whitespace
+  };
+
   // Customize the VS Code Dark Plus theme
   const customStyle = {
     ...vscDarkPlus,
@@ -25,12 +34,17 @@ const SQLMessage: React.FC<SQLMessageProps> = ({ sql, onCopy }) => {
       fontSize: 'var(--vscode-editor-font-size, 13px)',
       fontFamily: 'var(--vscode-editor-font-family, monospace)',
       background: 'var(--vscode-editor-background)',
+      padding: '12px 16px',
     },
     'code[class*="language-"]': {
       ...vscDarkPlus['code[class*="language-"]'],
       fontFamily: 'var(--vscode-editor-font-family, monospace)',
-      whiteSpace: 'pre-wrap' as const,
-      wordBreak: 'break-word' as const,
+      whiteSpace: 'pre' as const,
+      wordSpacing: 'normal' as const,
+      wordBreak: 'normal' as const,
+      wordWrap: 'normal' as const,
+      lineHeight: 1.5,
+      tabSize: 4,
     },
   };
 
@@ -66,23 +80,22 @@ const SQLMessage: React.FC<SQLMessageProps> = ({ sql, onCopy }) => {
         <SyntaxHighlighter
           language="sql"
           style={customStyle}
+          showLineNumbers={true}
+          wrapLongLines={false}
           customStyle={{
             margin: 0,
-            padding: '12px 16px',
             background: 'var(--vscode-editor-background)',
           }}
-          showLineNumbers={true}
-          wrapLongLines={true}
           lineNumberStyle={{
-            minWidth: '2em',
+            minWidth: '2.5em',
             paddingRight: '1em',
-            color: 'var(--vscode-editorLineNumber-foreground)',
             textAlign: 'right',
             userSelect: 'none',
             opacity: 0.5,
+            color: 'var(--vscode-editorLineNumber-foreground)',
           }}
         >
-          {sql}
+          {formatSQL(sql)}
         </SyntaxHighlighter>
       </div>
     </div>

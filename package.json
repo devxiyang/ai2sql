@@ -15,16 +15,16 @@
   "main": "./dist/extension.js",
   "contributes": {
     "viewsContainers": {
-      "activitybar": [
+      "panel": [
         {
-          "id": "ai2sql-sidebar-view",
+          "id": "ai2sql",
           "title": "AI2SQL",
           "icon": "media/icon.svg"
         }
       ]
     },
     "views": {
-      "ai2sql-sidebar-view": [
+      "ai2sql": [
         {
           "type": "webview",
           "id": "ai2sql-sidebar",
@@ -33,6 +33,15 @@
           "contextualTitle": "AI2SQL"
         }
       ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "ai2sql-sidebar",
+        "contents": "Welcome to AI2SQL! Start by typing your query or selecting SQL code to optimize."
+      }
+    ],
+    "viewsLocation": {
+      "ai2sql-sidebar-view": "right"
     },
     "commands": [
       {
