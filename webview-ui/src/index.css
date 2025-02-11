@@ -1,3 +1,78 @@
 @tailwind base;
 @tailwind components;
-@tailwind utilities; 
+@tailwind utilities;
+
+.markdown-body {
+  line-height: 1.6;
+}
+
+.markdown-body h1 {
+  font-size: 1.5em;
+  margin-bottom: 0.5em;
+}
+
+.markdown-body h2 {
+  font-size: 1.3em;
+  margin-bottom: 0.5em;
+}
+
+.markdown-body h3 {
+  font-size: 1.1em;
+  margin-bottom: 0.5em;
+}
+
+.markdown-body p {
+  margin-bottom: 0.5em;
+}
+
+.markdown-body ul, .markdown-body ol {
+  margin-left: 1.5em;
+  margin-bottom: 0.5em;
+}
+
+.markdown-body li {
+  margin-bottom: 0.25em;
+}
+
+.markdown-body code {
+  background-color: var(--vscode-editor-background);
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  font-family: var(--vscode-editor-font-family);
+}
+
+.markdown-body pre {
+  background-color: var(--vscode-editor-background);
+  padding: 1em;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 0.5em 0;
+}
+
+.markdown-body pre code {
+  background-color: transparent;
+  padding: 0;
+  border-radius: 0;
+}
+
+.markdown-body blockquote {
+  border-left: 4px solid var(--vscode-panel-border);
+  margin: 0.5em 0;
+  padding-left: 1em;
+  color: var(--vscode-descriptionForeground);
+}
+
+.markdown-body table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.5em 0;
+}
+
+.markdown-body th, .markdown-body td {
+  border: 1px solid var(--vscode-panel-border);
+  padding: 0.5em;
+}
+
+.markdown-body th {
+  background-color: var(--vscode-editor-selectionBackground);
+} 

@@ -1,4 +1,5 @@
 import React from 'react';
+import ReactMarkdown from 'react-markdown';
 import SQLMessage from './SQLMessage';
 
 interface ChatMessageProps {
@@ -34,7 +35,9 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isUser, timestamp })
         {isSQL ? (
           <SQLMessage sql={message} />
         ) : (
-          <p className="text-sm">{message}</p>
+          <div className="text-sm markdown-body">
+            <ReactMarkdown>{message}</ReactMarkdown>
+          </div>
         )}
         {timestamp && (
           <span 
