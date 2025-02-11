@@ -29,15 +29,20 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
         // Handle messages from the webview
         webviewView.webview.onDidReceiveMessage(async (message: any) => {
+            console.log('Received message:', message);
+            
             switch (message.type) {
                 case 'generate':
                     try {
+                        console.log('Generating SQL for:', message.prompt);
                         const sql = await this._aiService.generateSQL(message.prompt);
+                        console.log('Generated SQL:', sql);
                         webviewView.webview.postMessage({
                             type: 'response',
                             content: sql
                         });
                     } catch (error) {
+                        console.error('Error in generate:', error);
                         webviewView.webview.postMessage({
                             type: 'response',
                             error: error instanceof Error ? error.message : String(error)
@@ -46,12 +51,15 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     break;
                 case 'optimize':
                     try {
+                        console.log('Optimizing SQL:', message.sql);
                         const optimizedSql = await this._aiService.optimizeSQL(message.sql);
+                        console.log('Optimized SQL:', optimizedSql);
                         webviewView.webview.postMessage({
                             type: 'response',
                             content: optimizedSql
                         });
                     } catch (error) {
+                        console.error('Error in optimize:', error);
                         webviewView.webview.postMessage({
                             type: 'response',
                             error: error instanceof Error ? error.message : String(error)

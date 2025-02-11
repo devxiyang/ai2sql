@@ -17,10 +17,13 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const vscodeService = VSCodeService.getInstance();
+    console.log('VSCode service initialized');
 
     const handleResponse = (response: AIResponse) => {
+      console.log('Received response:', response);
       setIsLoading(false);
       if (response.error) {
+        console.error('Response error:', response.error);
         setMessages((prev) => [
           ...prev,
           {
@@ -44,13 +47,16 @@ const App: React.FC = () => {
     };
 
     vscodeService.registerMessageHandler('response', handleResponse);
+    console.log('Response handler registered');
 
     return () => {
       vscodeService.unregisterMessageHandler('response');
+      console.log('Response handler unregistered');
     };
   }, []);
 
   const handleSendMessage = (content: string) => {
+    console.log('Sending message:', content);
     const newMessage: Message = {
       id: Date.now().toString(),
       content,
@@ -63,8 +69,10 @@ const App: React.FC = () => {
 
     const vscodeService = VSCodeService.getInstance();
     if (content.toLowerCase().includes('optimize')) {
+      console.log('Sending optimize request');
       vscodeService.optimizeSQL(content);
     } else {
+      console.log('Sending generate request');
       vscodeService.generateSQL(content);
     }
   };

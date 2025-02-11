@@ -1,4 +1,5 @@
 import React from 'react';
+import SQLMessage from './SQLMessage';
 
 interface ChatMessageProps {
   message: string;
@@ -7,6 +8,15 @@ interface ChatMessageProps {
 }
 
 const ChatMessage: React.FC<ChatMessageProps> = ({ message, isUser, timestamp }) => {
+  const isSQL = !isUser && (
+    message.toUpperCase().includes('SELECT') ||
+    message.toUpperCase().includes('INSERT') ||
+    message.toUpperCase().includes('UPDATE') ||
+    message.toUpperCase().includes('DELETE') ||
+    message.toUpperCase().includes('CREATE') ||
+    message.toUpperCase().includes('ALTER')
+  );
+
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4`}>
       <div
@@ -21,7 +31,11 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isUser, timestamp })
           fontFamily: 'var(--vscode-font-family)',
         }}
       >
-        <p className="text-sm">{message}</p>
+        {isSQL ? (
+          <SQLMessage sql={message} />
+        ) : (
+          <p className="text-sm">{message}</p>
+        )}
         {timestamp && (
           <span 
             className="text-xs mt-1 block"
