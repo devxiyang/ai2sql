@@ -7,16 +7,22 @@ interface ChatHistoryMessage {
     isUser: boolean;
 }
 
+interface ChatSummaryCache {
+    summary: string;
+    messageCount: number;
+}
+
 export class UnifiedAIService implements BaseAIService {
     private client: OpenAI;
     private model: string;
+    private summaryCache: ChatSummaryCache | null = null;
     private readonly MAX_HISTORY_MESSAGES = 10;  // Maximum number of history messages to include
     private readonly MAX_HISTORY_TOKENS = 2000;  // Maximum tokens for history messages
     private readonly STREAM_TIMEOUT = 1800000;   // 30 minutes timeout for streaming (Deepseek max)
     private readonly INITIAL_CHUNK_TIMEOUT = 120000;  // 2 minutes timeout for first chunk
     private readonly CHUNK_TIMEOUT = 30000;      // 30 seconds timeout for subsequent chunks
     private readonly RETRY_COUNT = 3;            // Number of retries for failed requests
-    private readonly SUMMARY_THRESHOLD = 6;      // Number of messages before summarizing
+    private readonly SUMMARY_THRESHOLD = 20;      // Number of messages before summarizing
 
     constructor(config: BaseAIServiceConfig) {
         this.client = new OpenAI({
@@ -30,6 +36,7 @@ export class UnifiedAIService implements BaseAIService {
     }
 
     private async summarizeChatHistory(messages: ChatHistoryMessage[]): Promise<ChatCompletionMessageParam[]> {
+        // If we have less messages than threshold, just return them directly
         if (messages.length <= this.SUMMARY_THRESHOLD) {
             return messages.map(msg => ({
                 role: msg.isUser ? 'user' as const : 'assistant' as const,
@@ -37,9 +44,24 @@ export class UnifiedAIService implements BaseAIService {
             }));
         }
 
-        // Keep the most recent messages as is
-        const recentMessages = messages.slice(-2);
-        const messagesToSummarize = messages.slice(0, -2);
+        // Get the most recent message
+        const latestMessage = messages[messages.length - 1];
+        const messagesToSummarize = messages.slice(0, -1);
+
+        // If we have a cached summary and the number of messages matches
+        if (this.summaryCache && this.summaryCache.messageCount === messagesToSummarize.length) {
+            console.log('Using cached summary for', messagesToSummarize.length, 'messages');
+            return [
+                {
+                    role: 'assistant',
+                    content: this.summaryCache.summary
+                },
+                {
+                    role: latestMessage.isUser ? 'user' as const : 'assistant' as const,
+                    content: latestMessage.content || ''
+                }
+            ];
+        }
 
         try {
             const completion = await this.client.chat.completions.create({
@@ -66,30 +88,41 @@ Keep the summary concise but informative. Format in Markdown with bullet points.
             const summary = completion.choices[0]?.message?.content || '';
             if (!summary) {
                 console.warn('Failed to generate summary, falling back to recent messages only');
-                return recentMessages.map(msg => ({
-                    role: msg.isUser ? 'user' as const : 'assistant' as const,
-                    content: msg.content || ''
-                }));
+                return [
+                    {
+                        role: latestMessage.isUser ? 'user' as const : 'assistant' as const,
+                        content: latestMessage.content || ''
+                    }
+                ];
             }
 
-            // Return the summary as an assistant message, followed by the recent messages
+            // Cache the new summary
+            this.summaryCache = {
+                summary: `Previous conversation summary:\n${summary}`,
+                messageCount: messagesToSummarize.length
+            };
+            console.log('Cached new summary for', messagesToSummarize.length, 'messages');
+
+            // Return the summary as an assistant message, followed by the latest message
             return [
                 {
                     role: 'assistant',
-                    content: `Previous conversation summary:\n${summary}`
+                    content: this.summaryCache.summary
                 },
-                ...recentMessages.map(msg => ({
-                    role: msg.isUser ? 'user' as const : 'assistant' as const,
-                    content: msg.content || ''
-                }))
+                {
+                    role: latestMessage.isUser ? 'user' as const : 'assistant' as const,
+                    content: latestMessage.content || ''
+                }
             ];
         } catch (error) {
             console.warn('Error summarizing chat history:', error);
-            // Fallback: keep only recent messages
-            return recentMessages.map(msg => ({
-                role: msg.isUser ? 'user' as const : 'assistant' as const,
-                content: msg.content || ''
-            }));
+            // Fallback: return only the latest message
+            return [
+                {
+                    role: latestMessage.isUser ? 'user' as const : 'assistant' as const,
+                    content: latestMessage.content || ''
+                }
+            ];
         }
     }
 
