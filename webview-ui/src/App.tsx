@@ -23,13 +23,11 @@ const App: React.FC = () => {
     
     const handleMessage = (event: MessageEvent) => {
       const message = event.data;
-      console.log('Raw message received in App:', message);
       
       // VS Code webview messages come with a specific format
       if (message && message.type === 'response') {
-        console.log('Processing response message in App:', message);
         if (message.error) {
-          console.log('Error in response:', message.error);
+          console.error('Error in response:', message.error);
           setMessages(prev => [...prev, {
             id: Date.now().toString(),
             content: `Error: ${message.error}`,
@@ -39,18 +37,12 @@ const App: React.FC = () => {
           setIsLoading(false);
           setCurrentResponse('');
         } else if (message.content !== undefined) {  // Changed to check for undefined
-          console.log('Content in response:', message.content);
-          console.log('Streaming:', message.streaming);
-          
           if (message.streaming) {
             // Update the current response for streaming
-            console.log('Updating streaming response:', message.content);
             setCurrentResponse(message.content);
           } else {
             // This is the final message
-            console.log('Received final message');
             const finalContent = message.content || currentResponse;
-            console.log('Final content:', finalContent);
             
             if (finalContent) {
               // Add the message to the chat history
@@ -67,7 +59,6 @@ const App: React.FC = () => {
                 setCurrentResponse('');
               }, 100);
             } else {
-              console.log('No final content to display');
               setIsLoading(false);
               setCurrentResponse('');
             }
@@ -77,18 +68,14 @@ const App: React.FC = () => {
     };
 
     window.addEventListener('message', handleMessage);
-    console.log('Message event listener registered');
 
     return () => {
       window.removeEventListener('message', handleMessage);
-      console.log('Message event listener removed');
     };
   }, [currentResponse]); // Add currentResponse to dependencies
 
   const handleSendMessage = (content: string) => {
     if (!content.trim() || isLoading) return;
-
-    console.log('Sending message:', content);
     
     // Add user message to chat
     setMessages(prev => [...prev, {
@@ -113,7 +100,6 @@ const App: React.FC = () => {
           isUser: msg.isUser
         }))
       };
-      console.log('Posting message to VS Code:', message);
       vscode.postMessage(message);
     } catch (error) {
       console.error('Error sending message:', error);

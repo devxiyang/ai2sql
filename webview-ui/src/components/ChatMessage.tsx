@@ -5,22 +5,49 @@ interface ChatMessageProps {
   message: string;
   isUser: boolean;
   timestamp?: string;
+  streaming?: boolean;
 }
 
-const LoadingDots = () => {
-  const [dots, setDots] = useState('');
+const ThinkingAnimation = () => {
+  const dotCount = 3;
+  const [dots, setDots] = useState<number[]>([]);
 
   useEffect(() => {
+    let currentDot = 0;
     const interval = setInterval(() => {
-      setDots(prev => prev.length >= 3 ? '' : prev + '.');
-    }, 500);
+      setDots(prev => {
+        const newDots = [...prev, currentDot];
+        if (newDots.length > dotCount) {
+          newDots.shift();
+        }
+        return newDots;
+      });
+      currentDot = (currentDot + 1) % dotCount;
+    }, 400);
+
     return () => clearInterval(interval);
   }, []);
 
-  return <span className="inline-block min-w-[24px]">{dots}</span>;
+  return (
+    <div className="flex items-center gap-1 ml-2">
+      {[0, 1, 2].map((index) => (
+        <div
+          key={index}
+          className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
+            dots.includes(index)
+              ? 'bg-[var(--vscode-textLink-foreground)] scale-100 opacity-100'
+              : 'bg-[var(--vscode-descriptionForeground)] scale-75 opacity-50'
+          }`}
+          style={{
+            transform: dots.includes(index) ? 'translateY(-2px)' : 'translateY(0)',
+          }}
+        />
+      ))}
+    </div>
+  );
 };
 
-const ChatMessage: React.FC<ChatMessageProps> = ({ message, isUser, timestamp }) => {
+const ChatMessage: React.FC<ChatMessageProps> = ({ message, isUser, timestamp, streaming = false }) => {
   const isSQL = !isUser && (
     message.includes('SELECT') ||
     message.includes('INSERT') ||
@@ -45,9 +72,9 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isUser, timestamp })
           }}
         >
           {isSQL ? (
-            <SQLMessage sql={message} />
+            <SQLMessage sql={message} streaming={streaming} />
           ) : (
-            <div style={{
+            <div className="relative" style={{
               color: isUser 
                 ? 'var(--vscode-button-foreground)' 
                 : 'var(--vscode-editor-foreground)',
@@ -58,11 +85,24 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isUser, timestamp })
             }}>
               {isGenerating ? (
                 <div className="flex items-center">
-                  <span>AI is crafting your SQL query</span>
-                  <LoadingDots />
+                  <span>AI is thinking</span>
+                  <ThinkingAnimation />
                 </div>
               ) : (
-                message
+                <>
+                  {message}
+                  {!isUser && !isSQL && streaming && (
+                    <div 
+                      className="absolute bottom-0 animate-pulse"
+                      style={{
+                        width: '2px',
+                        height: '1.2em',
+                        backgroundColor: 'var(--vscode-textLink-foreground)',
+                        marginLeft: '2px',
+                      }}
+                    />
+                  )}
+                </>
               )}
             </div>
           )}

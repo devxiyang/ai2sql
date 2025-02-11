@@ -43,7 +43,6 @@ export class UnifiedAIService implements BaseAIService {
 
     async generateSQL(prompt: string, onStream?: (chunk: string) => void, chatHistory: { content: string; isUser: boolean }[] = []): Promise<string> {
         console.log('Generating SQL with prompt:', prompt);
-        console.log('Stream mode:', !!onStream);
         console.log('Chat history length:', chatHistory.length);
         
         try {
@@ -88,7 +87,6 @@ ORDER BY
             ];
 
             if (onStream) {
-                console.log('Creating streaming completion with history...');
                 let stream;
                 try {
                     stream = await this.client.chat.completions.create({
@@ -98,22 +96,12 @@ ORDER BY
                         stream: true,
                         max_tokens: 2000,
                     });
-                    console.log('Stream created successfully');
                 } catch (createError) {
                     console.error('Error creating stream:', createError);
-                    if (createError instanceof Error) {
-                        console.error('Error details:', {
-                            name: createError.name,
-                            message: createError.message,
-                            stack: createError.stack
-                        });
-                    }
                     throw createError;
                 }
 
-                console.log('Processing stream chunks...');
                 let fullResponse = '';
-                let chunkCount = 0;
                 let lastChunkTime = Date.now();
                 const timeoutDuration = 30000; // 30 seconds timeout
                 
@@ -124,35 +112,22 @@ ORDER BY
                             throw new Error('Stream timeout: No response received for 30 seconds');
                         }
                         lastChunkTime = currentTime;
-
-                        chunkCount++;
-                        console.log(`Processing chunk ${chunkCount}:`, JSON.stringify(chunk));
                         
                         const content = chunk.choices[0]?.delta?.content || '';
-                        console.log(`Chunk ${chunkCount} content:`, content);
-                        
                         if (content) {
                             fullResponse += content;
-                            console.log(`Accumulated response (${chunkCount}):`, fullResponse);
                             try {
                                 onStream(fullResponse);
-                                console.log(`Successfully sent chunk ${chunkCount} to callback`);
                             } catch (callbackError) {
-                                console.error(`Error in callback for chunk ${chunkCount}:`, callbackError);
+                                console.error('Error in stream callback:', callbackError);
                                 throw callbackError;
                             }
-                        } else {
-                            console.log(`Empty content in chunk ${chunkCount}`);
                         }
                     }
                     
-                    console.log('Stream completed. Total chunks:', chunkCount);
-                    console.log('Final response:', fullResponse);
-                    
                     if (!fullResponse) {
-                        // If no response was generated, create a simple example SQL
                         const defaultSQL = 'SELECT\n  *\nFROM\n  example_table\nLIMIT 10;';
-                        console.log('No content generated, using default SQL:', defaultSQL);
+                        console.log('No content generated, using default SQL');
                         if (onStream) {
                             onStream(defaultSQL);
                         }
@@ -162,13 +137,6 @@ ORDER BY
                     return fullResponse;
                 } catch (streamError) {
                     console.error('Error processing stream:', streamError);
-                    if (streamError instanceof Error) {
-                        console.error('Stream error details:', {
-                            name: streamError.name,
-                            message: streamError.message,
-                            stack: streamError.stack
-                        });
-                    }
                     throw streamError;
                 }
             } else {
@@ -182,16 +150,11 @@ ORDER BY
                 if (!sql) {
                     throw new Error('No SQL generated');
                 }
-
-                console.log('Generated SQL:', sql);
                 return sql;
             }
         } catch (error) {
             console.error('Error generating SQL:', error);
-            if (error instanceof Error) {
-                throw error;
-            }
-            throw new Error('Failed to generate SQL');
+            throw error instanceof Error ? error : new Error('Failed to generate SQL');
         }
     }
 
@@ -294,16 +257,11 @@ WHERE
                 if (!optimizedSql) {
                     throw new Error('No optimized SQL generated');
                 }
-
-                console.log('Optimized SQL:', optimizedSql);
                 return optimizedSql;
             }
         } catch (error) {
             console.error('Error optimizing SQL:', error);
-            if (error instanceof Error) {
-                throw error;
-            }
-            throw new Error('Failed to optimize SQL');
+            throw error instanceof Error ? error : new Error('Failed to optimize SQL');
         }
     }
 } 
