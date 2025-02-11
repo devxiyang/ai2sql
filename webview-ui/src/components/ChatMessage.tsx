@@ -9,13 +9,13 @@ interface ChatMessageProps {
 
 const ChatMessage: React.FC<ChatMessageProps> = ({ message, isUser, timestamp }) => {
   const isSQL = !isUser && (
-    message.toUpperCase().includes('SELECT') ||
-    message.toUpperCase().includes('INSERT') ||
-    message.toUpperCase().includes('UPDATE') ||
-    message.toUpperCase().includes('DELETE') ||
-    message.toUpperCase().includes('CREATE') ||
-    message.toUpperCase().includes('ALTER')
-  );
+    message.includes('SELECT') ||
+    message.includes('INSERT') ||
+    message.includes('UPDATE') ||
+    message.includes('DELETE') ||
+    message.includes('CREATE') ||
+    message.includes('ALTER')
+  ) && !message.includes('```');  // Exclude markdown formatted SQL
 
   return (
     <div className="px-4 py-2 hover:bg-[var(--vscode-list-hoverBackground)]">

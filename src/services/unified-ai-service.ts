@@ -37,9 +37,10 @@ Format the SQL query with the following rules:
 3. Use proper indentation (2 spaces) for sub-clauses and conditions
 4. Place each column/condition on a new line when there are multiple
 5. Add appropriate spacing around operators and parentheses
-6. Only output the raw SQL query, no explanations or markdown
+6. Output ONLY the raw SQL query without any markdown formatting, explanations, or code blocks
+7. Do not use \`\`\` or any other markdown syntax
 
-Example format:
+Example output:
 SELECT
   column1,
   column2,
@@ -153,9 +154,10 @@ Format the SQL query with the following rules:
 3. Use proper indentation (2 spaces) for sub-clauses and conditions
 4. Place each column/condition on a new line when there are multiple
 5. Add appropriate spacing around operators and parentheses
-6. Only output the raw SQL query, no explanations or markdown
+6. Output ONLY the raw SQL query without any markdown formatting, explanations, or code blocks
+7. Do not use \`\`\` or any other markdown syntax
 
-Example format:
+Example output:
 SELECT
   column1,
   column2,
