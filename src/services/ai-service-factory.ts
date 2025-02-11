@@ -17,18 +17,18 @@ export class AIServiceFactory {
 
     public static getConfiguration(): AIModelConfig {
         const config = vscode.workspace.getConfiguration('ai2sql');
-        const provider = config.get<string>('provider') as AIProvider || AIProvider.OpenAI;
+        const provider = config.get<string>('provider') as AIProvider || AIProvider.Deepseek;
         
         const apiKeyMap = {
+            [AIProvider.Deepseek]: config.get<string>('deepseekApiKey'),
             [AIProvider.OpenAI]: config.get<string>('openaiApiKey'),
             [AIProvider.Claude]: config.get<string>('claudeApiKey'),
-            [AIProvider.Deepseek]: config.get<string>('deepseekApiKey'),
         };
 
         const modelMap = {
+            [AIProvider.Deepseek]: config.get<string>('deepseekModel') || 'deepseek-chat',
             [AIProvider.OpenAI]: config.get<string>('openaiModel') || 'gpt-4',
             [AIProvider.Claude]: config.get<string>('claudeModel') || 'claude-3-opus-20240229',
-            [AIProvider.Deepseek]: config.get<string>('deepseekModel') || 'deepseek-chat',
         };
 
         return {
@@ -42,7 +42,18 @@ export class AIServiceFactory {
         const config = AIServiceFactory.getConfiguration();
         
         if (!config.apiKey) {
-            throw new Error(`API key for ${config.provider} is not configured. Please set it in the extension settings.`);
+            vscode.window.showErrorMessage(
+                `API key for ${config.provider} is not configured.`, 
+                'Open Settings'
+            ).then(selection => {
+                if (selection === 'Open Settings') {
+                    vscode.commands.executeCommand(
+                        'workbench.action.openSettings',
+                        `ai2sql.${config.provider}ApiKey`
+                    );
+                }
+            });
+            throw new Error(`Please configure the API key in settings (ai2sql.${config.provider}ApiKey)`);
         }
 
         let service = this.services.get(config.provider);

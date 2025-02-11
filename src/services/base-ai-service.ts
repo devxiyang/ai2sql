@@ -12,20 +12,20 @@ export interface BaseAIService {
 }
 
 export enum AIProvider {
+    Deepseek = 'deepseek',
     OpenAI = 'openai',
-    Claude = 'claude',
-    Deepseek = 'deepseek'
+    Claude = 'claude'
 }
 
 export const AI_PROVIDER_CONFIG = {
+    [AIProvider.Deepseek]: {
+        baseURL: 'https://api.deepseek.com',
+    },
     [AIProvider.OpenAI]: {
         baseURL: 'https://api.openai.com/v1',
     },
     [AIProvider.Claude]: {
         baseURL: 'https://api.anthropic.com/v1',
-    },
-    [AIProvider.Deepseek]: {
-        baseURL: 'https://api.deepseek.com/v1',
     }
 };
 

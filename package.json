@@ -50,8 +50,18 @@
         "ai2sql.provider": {
           "type": "string",
           "enum": ["openai", "claude", "deepseek"],
-          "default": "openai",
+          "default": "deepseek",
           "description": "The AI provider to use for SQL generation and optimization"
+        },
+        "ai2sql.deepseekApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Your Deepseek API key"
+        },
+        "ai2sql.deepseekModel": {
+          "type": "string",
+          "default": "deepseek-chat",
+          "description": "The Deepseek model to use"
         },
         "ai2sql.openaiApiKey": {
           "type": "string",
@@ -72,16 +82,6 @@
           "type": "string",
           "default": "claude-3-opus-20240229",
           "description": "The Claude model to use (e.g. claude-3-opus-20240229, claude-3-sonnet-20240229)"
-        },
-        "ai2sql.deepseekApiKey": {
-          "type": "string",
-          "default": "",
-          "description": "Your Deepseek API key"
-        },
-        "ai2sql.deepseekModel": {
-          "type": "string",
-          "default": "deepseek-chat",
-          "description": "The Deepseek model to use"
         }
       }
     }

@@ -5,10 +5,15 @@ import { getNonce } from './utils';
 export class SidebarProvider implements vscode.WebviewViewProvider {
     _view?: vscode.WebviewView;
     _doc?: vscode.TextDocument;
-    private _aiService: AIService;
+    private _aiService?: AIService;
 
-    constructor(private readonly _extensionUri: vscode.Uri) {
-        this._aiService = new AIService();
+    constructor(private readonly _extensionUri: vscode.Uri) {}
+
+    private getService(): AIService {
+        if (!this._aiService) {
+            this._aiService = new AIService();
+        }
+        return this._aiService;
     }
 
     public resolveWebviewView(
@@ -31,41 +36,51 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         webviewView.webview.onDidReceiveMessage(async (message: any) => {
             console.log('Received message:', message);
             
-            switch (message.type) {
-                case 'generate':
-                    try {
-                        console.log('Generating SQL for:', message.prompt);
-                        const sql = await this._aiService.generateSQL(message.prompt);
-                        console.log('Generated SQL:', sql);
-                        webviewView.webview.postMessage({
-                            type: 'response',
-                            content: sql
-                        });
-                    } catch (error) {
-                        console.error('Error in generate:', error);
-                        webviewView.webview.postMessage({
-                            type: 'response',
-                            error: error instanceof Error ? error.message : String(error)
-                        });
-                    }
-                    break;
-                case 'optimize':
-                    try {
-                        console.log('Optimizing SQL:', message.sql);
-                        const optimizedSql = await this._aiService.optimizeSQL(message.sql);
-                        console.log('Optimized SQL:', optimizedSql);
-                        webviewView.webview.postMessage({
-                            type: 'response',
-                            content: optimizedSql
-                        });
-                    } catch (error) {
-                        console.error('Error in optimize:', error);
-                        webviewView.webview.postMessage({
-                            type: 'response',
-                            error: error instanceof Error ? error.message : String(error)
-                        });
-                    }
-                    break;
+            try {
+                const aiService = this.getService();
+                
+                switch (message.type) {
+                    case 'generate':
+                        try {
+                            console.log('Generating SQL for:', message.prompt);
+                            const sql = await aiService.generateSQL(message.prompt);
+                            console.log('Generated SQL:', sql);
+                            webviewView.webview.postMessage({
+                                type: 'response',
+                                content: sql
+                            });
+                        } catch (error) {
+                            console.error('Error in generate:', error);
+                            webviewView.webview.postMessage({
+                                type: 'response',
+                                error: error instanceof Error ? error.message : String(error)
+                            });
+                        }
+                        break;
+                    case 'optimize':
+                        try {
+                            console.log('Optimizing SQL:', message.sql);
+                            const optimizedSql = await aiService.optimizeSQL(message.sql);
+                            console.log('Optimized SQL:', optimizedSql);
+                            webviewView.webview.postMessage({
+                                type: 'response',
+                                content: optimizedSql
+                            });
+                        } catch (error) {
+                            console.error('Error in optimize:', error);
+                            webviewView.webview.postMessage({
+                                type: 'response',
+                                error: error instanceof Error ? error.message : String(error)
+                            });
+                        }
+                        break;
+                }
+            } catch (error) {
+                console.error('Service error:', error);
+                webviewView.webview.postMessage({
+                    type: 'response',
+                    error: error instanceof Error ? error.message : String(error)
+                });
             }
         });
     }
