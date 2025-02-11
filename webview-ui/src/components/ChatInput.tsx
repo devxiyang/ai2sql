@@ -28,7 +28,10 @@ const ChatInput: React.FC<ChatInputProps> = ({
   };
 
   return (
-    <div className="border-t border-gray-200 p-4 bg-white">
+    <div className="border-t p-4" style={{ 
+      backgroundColor: 'var(--vscode-sideBar-background)',
+      borderColor: 'var(--vscode-panel-border)'
+    }}>
       <div className="flex space-x-4">
         <textarea
           value={message}
@@ -36,12 +39,28 @@ const ChatInput: React.FC<ChatInputProps> = ({
           onKeyPress={handleKeyPress}
           placeholder={placeholder}
           disabled={disabled}
-          className="flex-1 min-h-[80px] p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none disabled:opacity-50 disabled:bg-gray-100"
+          className="flex-1 min-h-[80px] p-3 rounded-lg resize-none"
+          style={{
+            backgroundColor: 'var(--vscode-input-background)',
+            color: 'var(--vscode-input-foreground)',
+            borderColor: 'var(--vscode-input-border)',
+            fontFamily: 'var(--vscode-font-family)',
+            outline: 'none',
+            border: '1px solid',
+            opacity: disabled ? 0.5 : 1,
+          }}
         />
         <button
           onClick={handleSend}
           disabled={!message.trim() || disabled}
-          className="px-6 py-2 bg-blue-600 text-white rounded-lg h-fit hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-6 py-2 rounded-lg h-fit"
+          style={{
+            backgroundColor: 'var(--vscode-button-background)',
+            color: 'var(--vscode-button-foreground)',
+            opacity: (!message.trim() || disabled) ? 0.5 : 1,
+            cursor: (!message.trim() || disabled) ? 'not-allowed' : 'pointer',
+            fontFamily: 'var(--vscode-font-family)',
+          }}
         >
           Send
         </button>

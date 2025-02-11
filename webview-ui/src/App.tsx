@@ -61,7 +61,6 @@ const App: React.FC = () => {
     setMessages((prev) => [...prev, newMessage]);
     setIsLoading(true);
 
-    // Send message to VS Code extension
     const vscodeService = VSCodeService.getInstance();
     if (content.toLowerCase().includes('optimize')) {
       vscodeService.optimizeSQL(content);
@@ -71,9 +70,17 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
-      <div className="flex-none bg-white border-b border-gray-200 p-4">
-        <h1 className="text-xl font-semibold text-gray-800">AI2SQL</h1>
+    <div className="flex flex-col h-screen" style={{ backgroundColor: 'var(--vscode-editor-background)' }}>
+      <div className="flex-none border-b" style={{ 
+        backgroundColor: 'var(--vscode-sideBar-background)',
+        borderColor: 'var(--vscode-panel-border)',
+      }}>
+        <h1 className="text-xl p-4" style={{ 
+          color: 'var(--vscode-foreground)',
+          fontFamily: 'var(--vscode-font-family)'
+        }}>
+          AI2SQL
+        </h1>
       </div>
       <div className="flex-1 flex flex-col min-h-0">
         <ChatContainer messages={messages} />
