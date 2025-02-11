@@ -35,20 +35,22 @@ const SQLMessage: React.FC<SQLMessageProps> = ({ sql, onCopy }) => {
   };
 
   return (
-    <div className="relative group">
+    <div className="rounded-md overflow-hidden border border-[var(--vscode-panel-border)]">
       <div className="flex justify-between items-center px-3 py-1.5" style={{
         backgroundColor: 'var(--vscode-titleBar-activeBackground)',
         borderBottom: '1px solid var(--vscode-panel-border)',
       }}>
-        <span className="text-xs" style={{
-          color: 'var(--vscode-titleBar-activeForeground)',
-          fontFamily: 'var(--vscode-font-family)',
-        }}>
-          SQL Query
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs opacity-60" style={{
+            color: 'var(--vscode-titleBar-activeForeground)',
+            fontFamily: 'var(--vscode-font-family)',
+          }}>
+            SQL Query
+          </span>
+        </div>
         <button
           onClick={handleCopy}
-          className="opacity-0 group-hover:opacity-100 px-2 py-0.5 rounded text-xs transition-opacity"
+          className="opacity-0 group-hover:opacity-100 px-2 py-0.5 rounded text-xs transition-opacity hover:bg-[var(--vscode-button-hoverBackground)]"
           style={{
             backgroundColor: 'var(--vscode-button-background)',
             color: 'var(--vscode-button-foreground)',
@@ -66,13 +68,13 @@ const SQLMessage: React.FC<SQLMessageProps> = ({ sql, onCopy }) => {
           style={customStyle}
           customStyle={{
             margin: 0,
-            padding: '12px',
+            padding: '12px 16px',
             background: 'var(--vscode-editor-background)',
           }}
           showLineNumbers={true}
           wrapLongLines={true}
           lineNumberStyle={{
-            minWidth: '3em',
+            minWidth: '2em',
             paddingRight: '1em',
             color: 'var(--vscode-editorLineNumber-foreground)',
             textAlign: 'right',
