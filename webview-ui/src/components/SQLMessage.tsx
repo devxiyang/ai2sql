@@ -5,9 +5,11 @@ import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 interface SQLMessageProps {
   sql: string;
   onCopy?: () => void;
+  loading?: boolean;
+  streaming?: boolean;
 }
 
-const SQLMessage: React.FC<SQLMessageProps> = ({ sql, onCopy }) => {
+const SQLMessage: React.FC<SQLMessageProps> = ({ sql, onCopy, loading = false, streaming = false }) => {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -20,6 +22,15 @@ const SQLMessage: React.FC<SQLMessageProps> = ({ sql, onCopy }) => {
       setTimeout(() => setCopied(false), 2000);
     }).catch(console.error);
   };
+
+  // Loading animation component
+  const LoadingDots = () => (
+    <div className="flex items-center gap-1">
+      <div className="animate-pulse">.</div>
+      <div className="animate-pulse" style={{ animationDelay: '0.2s' }}>.</div>
+      <div className="animate-pulse" style={{ animationDelay: '0.4s' }}>.</div>
+    </div>
+  );
 
   // Customize the VS Code Dark Plus theme
   const customStyle = {
@@ -54,24 +65,26 @@ const SQLMessage: React.FC<SQLMessageProps> = ({ sql, onCopy }) => {
       }}>
         <div className="flex items-center gap-2">
           <span style={{ color: 'var(--vscode-tab-inactiveForeground)' }}>
-            SQL Query
+            SQL Query {loading && <LoadingDots />}
           </span>
         </div>
         <div className="flex items-center">
-          <button
-            onClick={handleCopy}
-            className="flex items-center gap-1 px-2 py-0.5 rounded hover:bg-[var(--vscode-button-hoverBackground)] transition-colors"
-            style={{
-              color: 'var(--vscode-tab-inactiveForeground)',
-              background: copied ? 'var(--vscode-button-background)' : 'none',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: 'inherit',
-            }}
-          >
-            <span className="codicon codicon-copy" style={{ fontSize: '12px' }}></span>
-            {copied ? 'Copied!' : 'Copy'}
-          </button>
+          {!loading && (
+            <button
+              onClick={handleCopy}
+              className="flex items-center gap-1 px-2 py-0.5 rounded hover:bg-[var(--vscode-button-hoverBackground)] transition-colors"
+              style={{
+                color: 'var(--vscode-tab-inactiveForeground)',
+                background: copied ? 'var(--vscode-button-background)' : 'none',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: 'inherit',
+              }}
+            >
+              <span className="codicon codicon-copy" style={{ fontSize: '12px' }}></span>
+              {copied ? 'Copied!' : 'Copy'}
+            </button>
+          )}
         </div>
       </div>
 
@@ -79,26 +92,39 @@ const SQLMessage: React.FC<SQLMessageProps> = ({ sql, onCopy }) => {
       <div className="p-4" style={{
         backgroundColor: 'var(--vscode-editor-background)',
       }}>
-        <SyntaxHighlighter
-          language="sql"
-          style={customStyle}
-          showLineNumbers={true}
-          wrapLongLines={false}
-          customStyle={{
-            margin: 0,
-            background: 'transparent',
-          }}
-          lineNumberStyle={{
-            minWidth: '2em',
-            paddingRight: '1em',
-            textAlign: 'right',
-            userSelect: 'none',
-            opacity: 0.5,
-            color: 'var(--vscode-editorLineNumber-foreground)',
-          }}
-        >
-          {sql}
-        </SyntaxHighlighter>
+        {loading ? (
+          <div className="flex items-center justify-center py-4" style={{
+            color: 'var(--vscode-descriptionForeground)',
+          }}>
+            <div className="flex flex-col items-center gap-2">
+              <div className="animate-spin rounded-full h-6 w-6 border-2 border-t-transparent" style={{
+                borderColor: 'var(--vscode-textLink-foreground) transparent'
+              }}></div>
+              <span className="text-xs">Generating SQL{streaming && '...'}</span>
+            </div>
+          </div>
+        ) : (
+          <SyntaxHighlighter
+            language="sql"
+            style={customStyle}
+            showLineNumbers={true}
+            wrapLongLines={false}
+            customStyle={{
+              margin: 0,
+              background: 'transparent',
+            }}
+            lineNumberStyle={{
+              minWidth: '2em',
+              paddingRight: '1em',
+              textAlign: 'right',
+              userSelect: 'none',
+              opacity: 0.5,
+              color: 'var(--vscode-editorLineNumber-foreground)',
+            }}
+          >
+            {sql}
+          </SyntaxHighlighter>
+        )}
       </div>
     </div>
   );

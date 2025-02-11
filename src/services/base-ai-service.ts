@@ -7,8 +7,8 @@ export interface BaseAIServiceConfig {
 }
 
 export interface BaseAIService {
-    generateSQL(prompt: string): Promise<string>;
-    optimizeSQL(sql: string): Promise<string>;
+    generateSQL(prompt: string, onStream?: (chunk: string) => void): Promise<string>;
+    optimizeSQL(sql: string, onStream?: (chunk: string) => void): Promise<string>;
 }
 
 export enum AIProvider {

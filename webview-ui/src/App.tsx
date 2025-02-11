@@ -16,6 +16,7 @@ const App: React.FC = () => {
     },
   ]);
   const [isLoading, setIsLoading] = useState(false);
+  const [currentResponse, setCurrentResponse] = useState<string>('');
 
   useEffect(() => {
     console.log('Setting up message event listener');
@@ -35,16 +36,25 @@ const App: React.FC = () => {
             isUser: false,
             timestamp: new Date().toLocaleTimeString(),
           }]);
+          setIsLoading(false);
+          setCurrentResponse('');
         } else if (message.content) {
           console.log('Content in response:', message.content);
-          setMessages(prev => [...prev, {
-            id: Date.now().toString(),
-            content: message.content,
-            isUser: false,
-            timestamp: new Date().toLocaleTimeString(),
-          }]);
+          if (message.streaming) {
+            // Update the current response for streaming
+            setCurrentResponse(message.content);
+          } else {
+            // Add the final message
+            setMessages(prev => [...prev, {
+              id: Date.now().toString(),
+              content: message.content,
+              isUser: false,
+              timestamp: new Date().toLocaleTimeString(),
+            }]);
+            setIsLoading(false);
+            setCurrentResponse('');
+          }
         }
-        setIsLoading(false);
       }
     };
 
@@ -70,19 +80,23 @@ const App: React.FC = () => {
       timestamp: new Date().toLocaleTimeString(),
     }]);
     
+    // Add a temporary loading message
     setIsLoading(true);
+    setCurrentResponse('');
 
     // Send message to VS Code extension
     try {
       const message = {
         type: content.toLowerCase().includes('optimize') ? 'optimize' : 'generate',
-        [content.toLowerCase().includes('optimize') ? 'sql' : 'prompt']: content
+        [content.toLowerCase().includes('optimize') ? 'sql' : 'prompt']: content,
+        stream: true  // Enable streaming
       };
       console.log('Posting message to VS Code:', message);
       vscode.postMessage(message);
     } catch (error) {
       console.error('Error sending message:', error);
       setIsLoading(false);
+      setCurrentResponse('');
       setMessages(prev => [...prev, {
         id: Date.now().toString(),
         content: `Error: ${error instanceof Error ? error.message : String(error)}`,
@@ -98,19 +112,16 @@ const App: React.FC = () => {
         backgroundColor: 'var(--vscode-sideBar-background)',
         borderColor: 'var(--vscode-panel-border)',
       }}>
-        <h1 className="text-base px-4 py-2" style={{ 
-          color: 'var(--vscode-foreground)',
-          fontFamily: 'var(--vscode-font-family)',
-          fontWeight: 'normal',
-        }}>
-          AI2SQL
-        </h1>
       </div>
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
         <div className="flex-1 overflow-y-auto" style={{
           backgroundColor: 'var(--vscode-editor-background)',
         }}>
-          <ChatContainer messages={messages} />
+          <ChatContainer 
+            messages={messages} 
+            currentResponse={currentResponse}
+            isLoading={isLoading}
+          />
         </div>
         <div className="flex-none" style={{
           borderTop: '1px solid var(--vscode-panel-border)',

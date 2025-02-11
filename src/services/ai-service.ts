@@ -8,18 +8,18 @@ export class AIService {
         this.service = AIServiceFactory.getInstance().getService();
     }
 
-    public async generateSQL(prompt: string): Promise<string> {
+    public async generateSQL(prompt: string, onStream?: (chunk: string) => void): Promise<string> {
         if (!prompt) {
             throw new Error('Prompt cannot be empty');
         }
-        return this.service.generateSQL(prompt);
+        return this.service.generateSQL(prompt, onStream);
     }
 
-    public async optimizeSQL(sql: string): Promise<string> {
+    public async optimizeSQL(sql: string, onStream?: (chunk: string) => void): Promise<string> {
         if (!sql) {
             throw new Error('SQL query cannot be empty');
         }
-        return this.service.optimizeSQL(sql);
+        return this.service.optimizeSQL(sql, onStream);
     }
 
     public static getConfiguration() {

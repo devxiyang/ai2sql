@@ -43,12 +43,28 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     case 'generate':
                         try {
                             console.log('Generating SQL for:', message.prompt);
-                            const sql = await aiService.generateSQL(message.prompt);
-                            console.log('Generated SQL:', sql);
-                            webviewView.webview.postMessage({
-                                type: 'response',
-                                content: sql
-                            });
+                            if (message.stream) {
+                                await aiService.generateSQL(message.prompt, (chunk) => {
+                                    webviewView.webview.postMessage({
+                                        type: 'response',
+                                        content: chunk,
+                                        streaming: true
+                                    });
+                                });
+                                // Send final message to indicate completion
+                                webviewView.webview.postMessage({
+                                    type: 'response',
+                                    content: '',
+                                    streaming: false
+                                });
+                            } else {
+                                const sql = await aiService.generateSQL(message.prompt);
+                                console.log('Generated SQL:', sql);
+                                webviewView.webview.postMessage({
+                                    type: 'response',
+                                    content: sql
+                                });
+                            }
                         } catch (error) {
                             console.error('Error in generate:', error);
                             webviewView.webview.postMessage({
@@ -60,12 +76,28 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     case 'optimize':
                         try {
                             console.log('Optimizing SQL:', message.sql);
-                            const optimizedSql = await aiService.optimizeSQL(message.sql);
-                            console.log('Optimized SQL:', optimizedSql);
-                            webviewView.webview.postMessage({
-                                type: 'response',
-                                content: optimizedSql
-                            });
+                            if (message.stream) {
+                                await aiService.optimizeSQL(message.sql, (chunk) => {
+                                    webviewView.webview.postMessage({
+                                        type: 'response',
+                                        content: chunk,
+                                        streaming: true
+                                    });
+                                });
+                                // Send final message to indicate completion
+                                webviewView.webview.postMessage({
+                                    type: 'response',
+                                    content: '',
+                                    streaming: false
+                                });
+                            } else {
+                                const optimizedSql = await aiService.optimizeSQL(message.sql);
+                                console.log('Optimized SQL:', optimizedSql);
+                                webviewView.webview.postMessage({
+                                    type: 'response',
+                                    content: optimizedSql
+                                });
+                            }
                         } catch (error) {
                             console.error('Error in optimize:', error);
                             webviewView.webview.postMessage({
