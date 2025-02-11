@@ -61,17 +61,11 @@ const App: React.FC = () => {
                 timestamp: new Date().toLocaleTimeString(),
               }]);
               
-              // Keep the current response until the message is added to the chat
-              setCurrentResponse(finalContent);
-              
-              // Clear loading state
-              setIsLoading(false);
-              
-              // Clear current response after a delay to ensure smooth transition
+              // Clear loading state and current response after a small delay
               setTimeout(() => {
-                console.log('Clearing current response');
+                setIsLoading(false);
                 setCurrentResponse('');
-              }, 500);
+              }, 100);
             } else {
               console.log('No final content to display');
               setIsLoading(false);
