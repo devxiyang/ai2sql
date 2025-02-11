@@ -15,7 +15,7 @@
   "main": "./dist/extension.js",
   "contributes": {
     "viewsContainers": {
-      "panel": [
+      "activitybar": [
         {
           "id": "ai2sql",
           "title": "AI2SQL",
@@ -33,15 +33,6 @@
           "contextualTitle": "AI2SQL"
         }
       ]
-    },
-    "viewsWelcome": [
-      {
-        "view": "ai2sql-sidebar",
-        "contents": "Welcome to AI2SQL! Start by typing your query or selecting SQL code to optimize."
-      }
-    ],
-    "viewsLocation": {
-      "ai2sql-sidebar-view": "right"
     },
     "commands": [
       {
