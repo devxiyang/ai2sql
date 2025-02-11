@@ -55,9 +55,18 @@ const SQLMessage: React.FC<SQLMessageProps> = ({ sql, onCopy, loading = false, s
     },
   };
 
+  const showContent = sql.trim().length > 0 || loading || streaming;
+  if (!showContent) {
+    console.log('SQLMessage: Not showing content', { sql, loading, streaming });
+    return null;
+  }
+
+  console.log('SQLMessage: Showing content', { sql, loading, streaming });
+
   return (
     <div className="flex flex-col my-2 border rounded-md overflow-hidden" style={{
       borderColor: 'var(--vscode-panel-border)',
+      minHeight: loading ? '150px' : 'auto',
     }}>
       {/* File info bar */}
       <div className="flex items-center justify-between px-2 py-1 text-xs" style={{
@@ -65,11 +74,11 @@ const SQLMessage: React.FC<SQLMessageProps> = ({ sql, onCopy, loading = false, s
       }}>
         <div className="flex items-center gap-2">
           <span style={{ color: 'var(--vscode-tab-inactiveForeground)' }}>
-            SQL Query {loading && <LoadingDots />}
+            SQL Query {(loading || streaming) && <LoadingDots />}
           </span>
         </div>
         <div className="flex items-center">
-          {!loading && (
+          {sql.trim() && (
             <button
               onClick={handleCopy}
               className="flex items-center gap-1 px-2 py-0.5 rounded hover:bg-[var(--vscode-button-hoverBackground)] transition-colors"
@@ -92,7 +101,7 @@ const SQLMessage: React.FC<SQLMessageProps> = ({ sql, onCopy, loading = false, s
       <div className="p-4" style={{
         backgroundColor: 'var(--vscode-editor-background)',
       }}>
-        {loading ? (
+        {loading && !sql.trim() ? (
           <div className="flex items-center justify-center py-4" style={{
             color: 'var(--vscode-descriptionForeground)',
           }}>
@@ -100,7 +109,7 @@ const SQLMessage: React.FC<SQLMessageProps> = ({ sql, onCopy, loading = false, s
               <div className="animate-spin rounded-full h-6 w-6 border-2 border-t-transparent" style={{
                 borderColor: 'var(--vscode-textLink-foreground) transparent'
               }}></div>
-              <span className="text-xs">Generating SQL{streaming && '...'}</span>
+              <span className="text-xs">Generating SQL{streaming ? '...' : ''}</span>
             </div>
           </div>
         ) : (
@@ -112,6 +121,7 @@ const SQLMessage: React.FC<SQLMessageProps> = ({ sql, onCopy, loading = false, s
             customStyle={{
               margin: 0,
               background: 'transparent',
+              minHeight: '2em',
             }}
             lineNumberStyle={{
               minWidth: '2em',
@@ -122,7 +132,7 @@ const SQLMessage: React.FC<SQLMessageProps> = ({ sql, onCopy, loading = false, s
               color: 'var(--vscode-editorLineNumber-foreground)',
             }}
           >
-            {sql}
+            {sql.trim()}
           </SyntaxHighlighter>
         )}
       </div>

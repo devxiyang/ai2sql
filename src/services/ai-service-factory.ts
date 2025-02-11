@@ -40,8 +40,10 @@ export class AIServiceFactory {
 
     public getService(): BaseAIService {
         const config = AIServiceFactory.getConfiguration();
+        console.log('Getting service for provider:', config.provider);
         
         if (!config.apiKey) {
+            console.error('API key is missing for provider:', config.provider);
             vscode.window.showErrorMessage(
                 `API key for ${config.provider} is not configured.`, 
                 'Open Settings'
@@ -56,15 +58,41 @@ export class AIServiceFactory {
             throw new Error(`Please configure the API key in settings (ai2sql.${config.provider}ApiKey)`);
         }
 
+        if (!config.model) {
+            console.error('Model is missing for provider:', config.provider);
+            throw new Error(`Model configuration is missing for ${config.provider}`);
+        }
+
         let service = this.services.get(config.provider);
         if (!service) {
+            console.log('Creating new service instance for provider:', config.provider);
             const providerConfig = AI_PROVIDER_CONFIG[config.provider];
-            service = new UnifiedAIService({
-                apiKey: config.apiKey,
+            if (!providerConfig) {
+                console.error('Provider configuration not found:', config.provider);
+                throw new Error(`Configuration not found for provider: ${config.provider}`);
+            }
+
+            console.log('Service configuration:', {
+                provider: config.provider,
                 model: config.model,
-                baseURL: providerConfig.baseURL
+                baseURL: providerConfig.baseURL,
+                apiKeyLength: config.apiKey.length
             });
-            this.services.set(config.provider, service);
+
+            try {
+                service = new UnifiedAIService({
+                    apiKey: config.apiKey,
+                    model: config.model,
+                    baseURL: providerConfig.baseURL
+                });
+                this.services.set(config.provider, service);
+                console.log('Service instance created successfully');
+            } catch (error) {
+                console.error('Error creating service instance:', error);
+                throw error;
+            }
+        } else {
+            console.log('Reusing existing service instance for provider:', config.provider);
         }
 
         return service;

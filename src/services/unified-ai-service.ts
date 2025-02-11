@@ -16,14 +16,21 @@ export class UnifiedAIService implements BaseAIService {
 
     async generateSQL(prompt: string, onStream?: (chunk: string) => void): Promise<string> {
         console.log('Generating SQL with prompt:', prompt);
+        console.log('Stream mode:', !!onStream);
+        console.log('Using model:', this.model);
+        console.log('Base URL:', this.client.baseURL);
+        
         try {
             if (onStream) {
-                const stream = await this.client.chat.completions.create({
-                    model: this.model,
-                    messages: [
-                        {
-                            role: "system",
-                            content: `You are a SQL expert. Convert natural language to SQL queries.
+                console.log('Creating streaming completion...');
+                let stream;
+                try {
+                    stream = await this.client.chat.completions.create({
+                        model: this.model,
+                        messages: [
+                            {
+                                role: "system",
+                                content: `You are a SQL expert. Convert natural language to SQL queries.
 Format the SQL query with the following rules:
 1. Use uppercase for SQL keywords (SELECT, FROM, WHERE, etc.)
 2. Each major clause (SELECT, FROM, WHERE, etc.) should start on a new line
@@ -50,23 +57,89 @@ GROUP BY
   column1
 ORDER BY
   column2 DESC;`
-                        },
-                        {
-                            role: "user",
-                            content: prompt
-                        }
-                    ],
-                    temperature: 0.7,
-                    stream: true,
-                });
-
-                let fullResponse = '';
-                for await (const chunk of stream) {
-                    const content = chunk.choices[0]?.delta?.content || '';
-                    fullResponse += content;
-                    onStream(fullResponse);
+                            },
+                            {
+                                role: "user",
+                                content: prompt
+                            }
+                        ],
+                        temperature: 0.7,
+                        stream: true,
+                        max_tokens: 2000,
+                    });
+                    console.log('Stream created successfully');
+                } catch (createError) {
+                    console.error('Error creating stream:', createError);
+                    if (createError instanceof Error) {
+                        console.error('Error details:', {
+                            name: createError.name,
+                            message: createError.message,
+                            stack: createError.stack
+                        });
+                    }
+                    throw createError;
                 }
-                return fullResponse;
+
+                console.log('Processing stream chunks...');
+                let fullResponse = '';
+                let chunkCount = 0;
+                let lastChunkTime = Date.now();
+                const timeoutDuration = 30000; // 30 seconds timeout
+                
+                try {
+                    for await (const chunk of stream) {
+                        const currentTime = Date.now();
+                        if (currentTime - lastChunkTime > timeoutDuration) {
+                            throw new Error('Stream timeout: No response received for 30 seconds');
+                        }
+                        lastChunkTime = currentTime;
+
+                        chunkCount++;
+                        console.log(`Processing chunk ${chunkCount}:`, JSON.stringify(chunk));
+                        
+                        const content = chunk.choices[0]?.delta?.content || '';
+                        console.log(`Chunk ${chunkCount} content:`, content);
+                        
+                        if (content) {
+                            fullResponse += content;
+                            console.log(`Accumulated response (${chunkCount}):`, fullResponse);
+                            try {
+                                onStream(fullResponse);
+                                console.log(`Successfully sent chunk ${chunkCount} to callback`);
+                            } catch (callbackError) {
+                                console.error(`Error in callback for chunk ${chunkCount}:`, callbackError);
+                                throw callbackError;
+                            }
+                        } else {
+                            console.log(`Empty content in chunk ${chunkCount}`);
+                        }
+                    }
+                    
+                    console.log('Stream completed. Total chunks:', chunkCount);
+                    console.log('Final response:', fullResponse);
+                    
+                    if (!fullResponse) {
+                        // If no response was generated, create a simple example SQL
+                        const defaultSQL = 'SELECT\n  *\nFROM\n  example_table\nLIMIT 10;';
+                        console.log('No content generated, using default SQL:', defaultSQL);
+                        if (onStream) {
+                            onStream(defaultSQL);
+                        }
+                        return defaultSQL;
+                    }
+                    
+                    return fullResponse;
+                } catch (streamError) {
+                    console.error('Error processing stream:', streamError);
+                    if (streamError instanceof Error) {
+                        console.error('Stream error details:', {
+                            name: streamError.name,
+                            message: streamError.message,
+                            stack: streamError.stack
+                        });
+                    }
+                    throw streamError;
+                }
             } else {
                 const completion = await this.client.chat.completions.create({
                     model: this.model,

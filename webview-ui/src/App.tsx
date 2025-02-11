@@ -23,11 +23,11 @@ const App: React.FC = () => {
     
     const handleMessage = (event: MessageEvent) => {
       const message = event.data;
-      console.log('Raw message received:', message);
+      console.log('Raw message received in App:', message);
       
       // VS Code webview messages come with a specific format
       if (message && message.type === 'response') {
-        console.log('Processing response message:', message);
+        console.log('Processing response message in App:', message);
         if (message.error) {
           console.log('Error in response:', message.error);
           setMessages(prev => [...prev, {
@@ -38,21 +38,28 @@ const App: React.FC = () => {
           }]);
           setIsLoading(false);
           setCurrentResponse('');
-        } else if (message.content) {
+        } else if (message.content !== undefined) {  // Changed to check for undefined
           console.log('Content in response:', message.content);
+          console.log('Streaming:', message.streaming);
           if (message.streaming) {
             // Update the current response for streaming
+            console.log('Updating streaming response:', message.content);
             setCurrentResponse(message.content);
           } else {
             // Add the final message
-            setMessages(prev => [...prev, {
-              id: Date.now().toString(),
-              content: message.content,
-              isUser: false,
-              timestamp: new Date().toLocaleTimeString(),
-            }]);
+            console.log('Adding final message:', message.content || currentResponse);
+            const finalContent = message.content || currentResponse;
+            if (finalContent) {
+              setMessages(prev => [...prev, {
+                id: Date.now().toString(),
+                content: finalContent,
+                isUser: false,
+                timestamp: new Date().toLocaleTimeString(),
+              }]);
+            }
             setIsLoading(false);
-            setCurrentResponse('');
+            // Don't clear currentResponse until the message is added
+            setTimeout(() => setCurrentResponse(''), 100);
           }
         }
       }
