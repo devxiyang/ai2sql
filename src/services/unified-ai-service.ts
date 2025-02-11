@@ -6,7 +6,7 @@ export class UnifiedAIService implements BaseAIService {
     private client: OpenAI;
     private model: string;
     private readonly MAX_HISTORY_MESSAGES = 10;  // Maximum number of history messages to include
-    private readonly MAX_HISTORY_TOKENS = 2000;  // Approximate token limit for history
+    private readonly MAX_HISTORY_TOKENS = 2000;  // Maximum tokens for history messages
 
     constructor(config: BaseAIServiceConfig) {
         this.client = new OpenAI({
@@ -29,13 +29,18 @@ export class UnifiedAIService implements BaseAIService {
 
         // Estimate token count (rough estimation: 4 chars ≈ 1 token)
         let totalLength = formattedMessages.reduce((sum, msg) => sum + msg.content.length, 0);
+        const estimatedTokens = Math.ceil(totalLength / 4);
         
-        // If total length exceeds our limit, remove older messages until we're under the limit
-        while (totalLength > this.MAX_HISTORY_TOKENS * 4 && formattedMessages.length > 1) {
-            const removed = formattedMessages.shift();
-            if (removed) {
-                totalLength -= removed.content.length;
+        // If history tokens exceed our limit, remove older messages
+        while (estimatedTokens > this.MAX_HISTORY_TOKENS && formattedMessages.length > 1) {
+            // Always keep the most recent user message
+            if (formattedMessages.length === 1 && formattedMessages[0].role === 'user') {
+                break;
             }
+            // Remove the oldest message
+            formattedMessages.shift();
+            // Recalculate total length
+            totalLength = formattedMessages.reduce((sum, msg) => sum + msg.content.length, 0);
         }
 
         return formattedMessages;
@@ -94,7 +99,6 @@ ORDER BY
                         messages,
                         temperature: 0.7,
                         stream: true,
-                        max_tokens: 2000,
                     });
                 } catch (createError) {
                     console.error('Error creating stream:', createError);

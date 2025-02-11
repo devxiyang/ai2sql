@@ -8,41 +8,44 @@ interface ChatMessageProps {
   streaming?: boolean;
 }
 
+// Add the animation styles to the component
+const thinkingAnimationStyle = `
+  @keyframes thinking {
+    0%, 100% {
+      transform: scaleY(0.3);
+      opacity: 0.2;
+    }
+    50% {
+      transform: scaleY(1);
+      opacity: 1;
+    }
+  }
+`;
+
+// Add the style tag to the document head
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = thinkingAnimationStyle;
+  document.head.appendChild(style);
+}
+
 const ThinkingAnimation = () => {
-  const dotCount = 3;
-  const [dots, setDots] = useState<number[]>([]);
-
-  useEffect(() => {
-    let currentDot = 0;
-    const interval = setInterval(() => {
-      setDots(prev => {
-        const newDots = [...prev, currentDot];
-        if (newDots.length > dotCount) {
-          newDots.shift();
-        }
-        return newDots;
-      });
-      currentDot = (currentDot + 1) % dotCount;
-    }, 400);
-
-    return () => clearInterval(interval);
-  }, []);
-
   return (
-    <div className="flex items-center gap-1 ml-2">
-      {[0, 1, 2].map((index) => (
-        <div
-          key={index}
-          className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
-            dots.includes(index)
-              ? 'bg-[var(--vscode-textLink-foreground)] scale-100 opacity-100'
-              : 'bg-[var(--vscode-descriptionForeground)] scale-75 opacity-50'
-          }`}
-          style={{
-            transform: dots.includes(index) ? 'translateY(-2px)' : 'translateY(0)',
-          }}
-        />
-      ))}
+    <div className="flex items-center gap-2 ml-2">
+      <div className="flex items-center gap-1">
+        {[...Array(4)].map((_, index) => (
+          <div
+            key={index}
+            style={{
+              width: '3px',
+              height: '16px',
+              borderRadius: '2px',
+              background: 'var(--vscode-button-background)',
+              animation: `thinking 1.5s ease-in-out ${index * 0.15}s infinite`,
+            }}
+          />
+        ))}
+      </div>
     </div>
   );
 };
@@ -85,7 +88,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isUser, timestamp, s
             }}>
               {isGenerating ? (
                 <div className="flex items-center">
-                  <span>AI is thinking</span>
+                  <span style={{ color: 'var(--vscode-button-background)' }}>AI is thinking</span>
                   <ThinkingAnimation />
                 </div>
               ) : (
@@ -97,7 +100,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isUser, timestamp, s
                       style={{
                         width: '2px',
                         height: '1.2em',
-                        backgroundColor: 'var(--vscode-textLink-foreground)',
+                        backgroundColor: 'var(--vscode-button-background)',
                         marginLeft: '2px',
                       }}
                     />
