@@ -1,9 +1,6 @@
-import React, { useEffect, useRef } from 'react';
-import hljs from 'highlight.js/lib/core';
-import sql from 'highlight.js/lib/languages/sql';
-import 'highlight.js/styles/vs2015.css';
-
-hljs.registerLanguage('sql', sql);
+import React from 'react';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 interface SQLMessageProps {
   sql: string;
@@ -11,42 +8,73 @@ interface SQLMessageProps {
 }
 
 const SQLMessage: React.FC<SQLMessageProps> = ({ sql, onCopy }) => {
-  const codeRef = useRef<HTMLElement>(null);
-
-  useEffect(() => {
-    if (codeRef.current) {
-      hljs.highlightElement(codeRef.current);
-    }
-  }, [sql]);
-
   const handleCopy = () => {
-    if (onCopy) {
-      onCopy();
-    }
-    // 备用复制方案
-    navigator.clipboard.writeText(sql).catch(console.error);
+    navigator.clipboard.writeText(sql).then(() => {
+      if (onCopy) {
+        onCopy();
+      }
+    }).catch(console.error);
+  };
+
+  // Customize the VS Code Dark Plus theme
+  const customStyle = {
+    ...vscDarkPlus,
+    'pre[class*="language-"]': {
+      ...vscDarkPlus['pre[class*="language-"]'],
+      margin: 0,
+      fontSize: 'var(--vscode-editor-font-size, 13px)',
+      fontFamily: 'var(--vscode-editor-font-family, monospace)',
+      background: 'var(--vscode-editor-background)',
+    },
+    'code[class*="language-"]': {
+      ...vscDarkPlus['code[class*="language-"]'],
+      fontFamily: 'var(--vscode-editor-font-family, monospace)',
+    },
   };
 
   return (
-    <div className="rounded-lg overflow-hidden">
+    <div className="rounded-md overflow-hidden" style={{
+      backgroundColor: 'var(--vscode-editor-background)',
+      border: '1px solid var(--vscode-panel-border)',
+    }}>
       <div className="relative">
-        <pre className="m-0 p-4 overflow-x-auto" style={{
-          backgroundColor: 'var(--vscode-editor-background)',
-          border: '1px solid var(--vscode-panel-border)',
+        <div className="flex justify-between items-center px-3 py-1.5" style={{
+          backgroundColor: 'var(--vscode-titleBar-activeBackground)',
+          borderBottom: '1px solid var(--vscode-panel-border)',
         }}>
-          <code ref={codeRef} className="language-sql">{sql}</code>
-        </pre>
-        <button
-          onClick={handleCopy}
-          className="absolute top-2 right-2 px-2 py-1 rounded text-xs"
-          style={{
-            backgroundColor: 'var(--vscode-button-background)',
-            color: 'var(--vscode-button-foreground)',
+          <span className="text-xs" style={{
+            color: 'var(--vscode-titleBar-activeForeground)',
             fontFamily: 'var(--vscode-font-family)',
-          }}
-        >
-          Copy
-        </button>
+          }}>
+            SQL Query
+          </span>
+          <button
+            onClick={handleCopy}
+            className="px-2 py-0.5 rounded text-xs hover:opacity-80 transition-opacity"
+            style={{
+              backgroundColor: 'var(--vscode-button-background)',
+              color: 'var(--vscode-button-foreground)',
+              fontFamily: 'var(--vscode-font-family)',
+              border: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            Copy
+          </button>
+        </div>
+        <div className="p-3">
+          <SyntaxHighlighter
+            language="sql"
+            style={customStyle}
+            customStyle={{
+              margin: 0,
+              padding: 0,
+              background: 'var(--vscode-editor-background)',
+            }}
+          >
+            {sql}
+          </SyntaxHighlighter>
+        </div>
       </div>
     </div>
   );

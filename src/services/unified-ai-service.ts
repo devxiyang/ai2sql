@@ -22,7 +22,7 @@ export class UnifiedAIService implements BaseAIService {
                 messages: [
                     {
                         role: "system",
-                        content: "You are a SQL expert. Convert natural language to SQL queries. Only respond with the SQL query, no explanations."
+                        content: "You are a SQL expert. Convert natural language to SQL queries. Only respond with the raw SQL query, no markdown formatting, no explanations, no backticks."
                     },
                     {
                         role: "user",
@@ -56,7 +56,7 @@ export class UnifiedAIService implements BaseAIService {
                 messages: [
                     {
                         role: "system",
-                        content: "You are a SQL optimization expert. Optimize the given SQL query for better performance. Only respond with the optimized SQL query, no explanations."
+                        content: "You are a SQL optimization expert. Optimize the given SQL query for better performance. Only respond with the optimized SQL query, no markdown formatting, no explanations, no backticks."
                     },
                     {
                         role: "user",
