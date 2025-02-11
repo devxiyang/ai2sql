@@ -1,299 +1,54 @@
-# AI2SQL
+# AI2SQL VSCode Extension
 
-An AI-powered SQL IDE that converts natural language to SQL queries.
+AI2SQL is a powerful VSCode extension that helps you generate and optimize SQL queries using AI. Simply write your requirements in natural language, and AI2SQL will convert them into efficient SQL queries.
 
-## Project Structure 
+## Features
 
-## Architecture
+- 🤖 **Natural Language to SQL**: Convert your requirements written in natural language into SQL queries
+- ⚡ **SQL Optimization**: Optimize your existing SQL queries for better performance
+- 💡 **Context Aware**: Understands your database schema and table relationships
+- ✨ **Real-time Conversion**: Instantly convert text to SQL as you type
 
-### Core Components
+## Usage
 
-1. **Chat Management (`core/chat/`)**
-   - Manages AI interactions using OpenAI's API
-   - Maintains conversation context
-   - Handles system prompts and tool calls
+1. **Generate SQL from Natural Language**:
+   - Select the text describing your query requirements
+   - Press `Cmd+Shift+P` (Mac) / `Ctrl+Shift+P` (Windows/Linux)
+   - Type "AI2SQL: Generate SQL" and press Enter
+   - The selected text will be replaced with the generated SQL query
 
-2. **Tool System (`core/tools/`)**
-   - Provides function calling capabilities for AI
-   - SQL analysis and validation tools:
-     - SQL structure analysis
-     - Schema validation
-     - Complexity scoring
-     - Query formatting
-   - Extensible tool registry system
+2. **Optimize Existing SQL**:
+   - Select the SQL query you want to optimize
+   - Press `Cmd+Shift+P` (Mac) / `Ctrl+Shift+P` (Windows/Linux)
+   - Type "AI2SQL: Optimize SQL" and press Enter
+   - The selected SQL will be replaced with an optimized version
 
-3. **Rule Engine (`core/rules/`)**
-   - SQL best practices validation
-   - Dialect-specific rules
-   - Multi-level rule configuration:
-     - Default rules (package)
-     - User rules (`~/.ai2sqlrules`)
-     - Project rules (`.ai2sqlrules`)
+## Requirements
 
-4. **Schema Management (`core/schema/`)**
-    - Local schema definition support
-    - Table and column information
-    - Schema loading from YAML files
-    - Multiple schema sources:
-      - Project schema files
-      - Database connections
+- VSCode 1.85.0 or higher
+- Active internet connection for AI functionality
 
-5. **Editor Session (`editor/`)**
-   - Manages user interaction sessions
-   - Handles input/output
-   - Maintains session history
+## Extension Settings
 
-### Supporting Components
+This extension contributes the following settings:
 
-1. **Configuration System (`utils/config.py`)**
-   - Hierarchical configuration:
-     - Package defaults
-     - User config (`~/.ai2sqlconfig`)
-     - Project config (`.ai2sqlconfig`)
-   - Environment variable support
-   - Runtime configuration
+* `ai2sql.model`: Select which AI model to use for generation and optimization
+* `ai2sql.apiKey`: Your API key for the AI service (required)
 
-2. **CLI Utilities (`utils/cli.py`)**
-   - Rich command-line interface
-   - Command history management
-   - Formatted output handling
-   - Error and warning displays
+## Known Issues
 
-### Data Flow
+- Currently in development, basic functionality only
 
-1. **Input Processing**
-   ```
-   User Input -> CLI -> Editor Session -> Chat Manager -> OpenAI API
-   ```
+## Release Notes
 
-2. **SQL Generation**
-   ```
-   OpenAI API -> Tool Calls -> SQL Analysis -> Rule Validation -> Formatted Output
-   ```
+### 0.0.1
 
-3. **Configuration Loading**
-   ```
-   Default Config -> User Config -> Project Config -> Runtime Config
-   ```
-
-## Configuration
-
-### Default Configuration
-
-```yaml
-# Default settings in package
-model: gpt-3.5-turbo
-dialect: mysql
-history_size: 1000
-theme: monokai
-```
-
-### User Configuration
-```yaml
-# ~/.ai2sqlconfig
-model: gpt-4
-dialect: postgresql
-theme: dracula
-```
-
-### Project Configuration
-```yaml
-# .ai2sqlconfig
-dialect: hive
-history_size: 2000
-```
-
-## Schema Management
-
-### Schema Definition
-```yaml
-# tables.yml
-tables:
-  - name: users
-    comment: "User information table"
-    columns:
-      - name: id
-        type: bigint
-        nullable: false
-        comment: "User ID"
-      - name: username
-        type: varchar(50)
-        comment: "User's login name"
-      - name: created_at
-        type: timestamp
-        comment: "Account creation time"
-
-- name: orders
-  comment: "Order information"
-  columns:
-    - name: order_id
-      type: bigint
-      nullable: false
-      comment: "Order ID"
-    - name: user_id
-      type: bigint
-      comment: "Reference to users.id"
-    - name: total_amount
-      type: decimal(10,2)
-      comment: "Order total amount"
-```
-
-### Loading Schema
-```bash
-# Load from project schema file
-ai2sql --schema ./tables.yml
-
-# Load from multiple files
-ai2sql --schema ./users.yml --schema ./orders.yml
-```
-
-## Rule System
-
-### Rule Definition
-```yaml
-rules:
-  - name: avoid_select_star
-    description: "Avoid using SELECT * in production queries"
-    pattern: "SELECT\\s+\\*"
-    suggestion: "Explicitly specify the columns you need"
-    dialect: all
-    severity: warning
-```
-
-### Rule Locations
-1. Package Default Rules
-   - Basic SQL best practices
-   - Common dialect-specific rules
-
-2. User Rules (`~/.ai2sqlrules`)
-   - Personal preferences
-   - Custom validations
-
-3. Project Rules (`.ai2sqlrules`)
-   - Project-specific requirements
-   - Team conventions
-
-## Development
-
-### Adding New Features
-
-1. **New SQL Dialect**
-   - Add dialect-specific rules
-   - Implement dialect-specific tools
-   - Update configuration options
-
-2. **New Tools**
-   - Create tool in `core/tools/`
-   - Register in tool registry
-   - Update system prompts
-
-3. **New Rules**
-   - Define rule pattern
-   - Add to appropriate rule file
-   - Implement validation logic
-
-### Testing
-
-```bash
-# Install development dependencies
-pip install -e ".[dev]"
-
-# Run tests
-pytest
-
-# Run specific test
-pytest tests/test_rules.py
-```
-
-## License
-
-MIT License
+Initial release of AI2SQL with basic SQL generation and optimization capabilities.
 
 ## Contributing
 
-1. Fork the repository
-2. Create your feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request 
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-## SQL Tools
+## License
 
-### SQL Analysis
-The system provides comprehensive SQL analysis tools powered by sqlglot:
-
-```python
-analysis = sql_analyzer.analyze(sql_query)
-```
-
-Analysis includes:
-1. **Structure Analysis**
-   - Tables used
-   - Columns referenced
-   - JOIN types
-   - WHERE conditions
-   - Aggregation functions
-
-2. **Schema Validation**
-   - Table existence check
-   - Column existence check
-   - Relationship validation
-
-3. **Complexity Scoring**
-   Points are assigned based on:
-   - Number of tables (+2 each)
-   - Number of JOINs (+3 each)
-   - Number of conditions (+1 each)
-   - Number of aggregations (+2 each)
-   - Number of subqueries (+5 each)
-
-### SQL Formatting
-```python
-# Format SQL with proper indentation
-formatted_sql = sql_analyzer.format_sql(sql_query, dialect="mysql")
-
-# Display SQL with syntax highlighting
-sql_analyzer.display_sql(sql_query)
-```
-
-### Tool Integration
-Tools are available to the AI through function calling:
-
-```json
-{
-  "name": "analyze_sql",
-  "description": "Analyze SQL query structure and complexity",
-  "parameters": {
-    "sql": "SQL query to analyze",
-    "dialect": "SQL dialect (mysql, postgresql, etc.)"
-  }
-}
-```
-
-```json
-{
-  "name": "validate_schema",
-  "description": "Validate SQL query against loaded schema",
-  "parameters": {
-    "sql": "SQL query to validate"
-  }
-}
-```
-
-### Example Output
-```python
-{
-  "structure": {
-    "tables": ["users", "orders"],
-    "columns": {
-      "users": ["id", "name"],
-      "orders": ["user_id", "total"]
-    },
-    "joins": ["INNER"],
-    "conditions": ["users.id = orders.user_id"],
-    "aggregations": ["SUM(total)"]
-  },
-  "complexity": 8,
-  "schema_issues": []
-}
-``` 
+This project is licensed under the MIT License - see the LICENSE file for details.
