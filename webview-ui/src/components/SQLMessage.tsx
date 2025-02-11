@@ -29,52 +29,59 @@ const SQLMessage: React.FC<SQLMessageProps> = ({ sql, onCopy }) => {
     'code[class*="language-"]': {
       ...vscDarkPlus['code[class*="language-"]'],
       fontFamily: 'var(--vscode-editor-font-family, monospace)',
+      whiteSpace: 'pre-wrap' as const,
+      wordBreak: 'break-word' as const,
     },
   };
 
   return (
-    <div className="rounded-md overflow-hidden" style={{
-      backgroundColor: 'var(--vscode-editor-background)',
-      border: '1px solid var(--vscode-panel-border)',
-    }}>
-      <div className="relative">
-        <div className="flex justify-between items-center px-3 py-1.5" style={{
-          backgroundColor: 'var(--vscode-titleBar-activeBackground)',
-          borderBottom: '1px solid var(--vscode-panel-border)',
+    <div className="relative group">
+      <div className="flex justify-between items-center px-3 py-1.5" style={{
+        backgroundColor: 'var(--vscode-titleBar-activeBackground)',
+        borderBottom: '1px solid var(--vscode-panel-border)',
+      }}>
+        <span className="text-xs" style={{
+          color: 'var(--vscode-titleBar-activeForeground)',
+          fontFamily: 'var(--vscode-font-family)',
         }}>
-          <span className="text-xs" style={{
-            color: 'var(--vscode-titleBar-activeForeground)',
+          SQL Query
+        </span>
+        <button
+          onClick={handleCopy}
+          className="opacity-0 group-hover:opacity-100 px-2 py-0.5 rounded text-xs transition-opacity"
+          style={{
+            backgroundColor: 'var(--vscode-button-background)',
+            color: 'var(--vscode-button-foreground)',
             fontFamily: 'var(--vscode-font-family)',
-          }}>
-            SQL Query
-          </span>
-          <button
-            onClick={handleCopy}
-            className="px-2 py-0.5 rounded text-xs hover:opacity-80 transition-opacity"
-            style={{
-              backgroundColor: 'var(--vscode-button-background)',
-              color: 'var(--vscode-button-foreground)',
-              fontFamily: 'var(--vscode-font-family)',
-              border: 'none',
-              cursor: 'pointer',
-            }}
-          >
-            Copy
-          </button>
-        </div>
-        <div className="p-3">
-          <SyntaxHighlighter
-            language="sql"
-            style={customStyle}
-            customStyle={{
-              margin: 0,
-              padding: 0,
-              background: 'var(--vscode-editor-background)',
-            }}
-          >
-            {sql}
-          </SyntaxHighlighter>
-        </div>
+            border: 'none',
+            cursor: 'pointer',
+          }}
+        >
+          Copy
+        </button>
+      </div>
+      <div className="overflow-x-auto">
+        <SyntaxHighlighter
+          language="sql"
+          style={customStyle}
+          customStyle={{
+            margin: 0,
+            padding: '12px',
+            background: 'var(--vscode-editor-background)',
+          }}
+          showLineNumbers={true}
+          wrapLongLines={true}
+          lineNumberStyle={{
+            minWidth: '3em',
+            paddingRight: '1em',
+            color: 'var(--vscode-editorLineNumber-foreground)',
+            textAlign: 'right',
+            userSelect: 'none',
+            opacity: 0.5,
+          }}
+        >
+          {sql}
+        </SyntaxHighlighter>
       </div>
     </div>
   );

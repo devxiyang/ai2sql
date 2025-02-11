@@ -28,98 +28,90 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isUser, timestamp })
   );
 
   return (
-    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4 px-4`}>
-      <div
-        className={`max-w-[85%] rounded-lg p-3 ${
-          isUser ? 'rounded-br-sm' : 'rounded-bl-sm'
-        }`}
-        style={{
-          backgroundColor: isUser 
-            ? 'var(--vscode-button-background)' 
-            : 'var(--vscode-editor-selectionBackground)',
-          color: isUser 
-            ? 'var(--vscode-button-foreground)' 
-            : 'var(--vscode-editor-foreground)',
-          fontFamily: 'var(--vscode-font-family)',
-          fontSize: 'var(--vscode-font-size, 13px)',
-          border: '1px solid var(--vscode-panel-border)',
-        }}
-      >
-        {isSQL ? (
-          <SQLMessage sql={message} />
-        ) : (
-          <div className="markdown-body" style={{
-            color: 'inherit',
-            fontSize: 'inherit',
-            fontFamily: 'inherit',
-          }}>
-            <ReactMarkdown
-              components={{
-                code: ({node, inline, className, children, ...props}: CodeProps) => {
-                  const match = /language-(\w+)/.exec(className || '');
-                  const language = match ? match[1] : '';
-                  
-                  if (!inline && language) {
-                    return (
-                      <div className="rounded-md overflow-hidden my-2" style={{
-                        border: '1px solid var(--vscode-panel-border)',
-                      }}>
-                        <div className="flex justify-between items-center px-3 py-1.5" style={{
-                          backgroundColor: 'var(--vscode-titleBar-activeBackground)',
-                          borderBottom: '1px solid var(--vscode-panel-border)',
-                        }}>
-                          <span className="text-xs" style={{
-                            color: 'var(--vscode-titleBar-activeForeground)',
-                            fontFamily: 'var(--vscode-font-family)',
-                          }}>
-                            {language.toUpperCase()}
-                          </span>
-                        </div>
-                        <SyntaxHighlighter
-                          language={language}
-                          style={vscDarkPlus}
-                          customStyle={{
-                            margin: 0,
-                            padding: '0.75rem',
-                            background: 'var(--vscode-editor-background)',
-                            fontSize: 'var(--vscode-editor-font-size, 13px)',
-                            fontFamily: 'var(--vscode-editor-font-family, monospace)',
-                          }}
-                        >
-                          {String(children).replace(/\n$/, '')}
-                        </SyntaxHighlighter>
-                      </div>
-                    );
-                  }
-                  
-                  return (
-                    <code
-                      className={className}
-                      style={{
-                        backgroundColor: 'var(--vscode-editor-background)',
-                        padding: '0.2em 0.4em',
-                        borderRadius: '3px',
-                        fontSize: '85%',
-                      }}
-                      {...props}
-                    >
-                      {children}
-                    </code>
-                  );
-                }
+    <div className="px-4 py-2 hover:bg-[var(--vscode-list-hoverBackground)]">
+      <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
+        {/* Message content */}
+        <div
+          className={`max-w-[85%] rounded-lg ${
+            isUser ? 'bg-[var(--vscode-button-background)]' : 'bg-[var(--vscode-editor-background)]'
+          }`}
+          style={{
+            border: '1px solid var(--vscode-panel-border)',
+          }}
+        >
+          {isSQL ? (
+            <SQLMessage sql={message} />
+          ) : (
+            <div 
+              className="px-4 py-3"
+              style={{
+                color: isUser 
+                  ? 'var(--vscode-button-foreground)' 
+                  : 'var(--vscode-editor-foreground)',
+                fontSize: 'var(--vscode-font-size, 13px)',
+                fontFamily: 'var(--vscode-font-family)',
               }}
             >
-              {message}
-            </ReactMarkdown>
-          </div>
-        )}
+              <ReactMarkdown
+                components={{
+                  code: ({node, inline, className, children, ...props}: CodeProps) => {
+                    const match = /language-(\w+)/.exec(className || '');
+                    const language = match ? match[1] : '';
+                    
+                    if (!inline && language) {
+                      return (
+                        <div className="my-2">
+                          <SyntaxHighlighter
+                            language={language}
+                            style={vscDarkPlus}
+                            customStyle={{
+                              margin: 0,
+                              padding: '0.75rem',
+                              background: 'var(--vscode-editor-background)',
+                              fontSize: 'var(--vscode-editor-font-size, 13px)',
+                              fontFamily: 'var(--vscode-editor-font-family, monospace)',
+                              border: '1px solid var(--vscode-panel-border)',
+                              borderRadius: '6px',
+                            }}
+                            showLineNumbers={true}
+                            wrapLongLines={true}
+                          >
+                            {String(children).replace(/\n$/, '')}
+                          </SyntaxHighlighter>
+                        </div>
+                      );
+                    }
+                    
+                    return (
+                      <code
+                        className={className}
+                        style={{
+                          backgroundColor: 'var(--vscode-editor-background)',
+                          padding: '0.2em 0.4em',
+                          borderRadius: '3px',
+                          fontSize: '85%',
+                          border: '1px solid var(--vscode-panel-border)',
+                        }}
+                        {...props}
+                      >
+                        {children}
+                      </code>
+                    );
+                  }
+                }}
+              >
+                {message}
+              </ReactMarkdown>
+            </div>
+          )}
+        </div>
+        
+        {/* Timestamp */}
         {timestamp && (
           <div 
-            className="text-xs mt-2 text-right"
+            className="text-xs mt-1 px-1"
             style={{
-              color: isUser 
-                ? 'var(--vscode-button-foreground)' 
-                : 'var(--vscode-descriptionForeground)',
+              color: 'var(--vscode-descriptionForeground)',
               opacity: 0.8
             }}
           >

@@ -93,25 +93,35 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen" style={{ backgroundColor: 'var(--vscode-editor-background)' }}>
+    <div className="flex flex-col h-screen">
       <div className="flex-none border-b" style={{ 
         backgroundColor: 'var(--vscode-sideBar-background)',
         borderColor: 'var(--vscode-panel-border)',
       }}>
-        <h1 className="text-xl p-4" style={{ 
+        <h1 className="text-base px-4 py-2" style={{ 
           color: 'var(--vscode-foreground)',
-          fontFamily: 'var(--vscode-font-family)'
+          fontFamily: 'var(--vscode-font-family)',
+          fontWeight: 'normal',
         }}>
           AI2SQL
         </h1>
       </div>
-      <div className="flex-1 flex flex-col min-h-0">
-        <ChatContainer messages={messages} />
-        <ChatInput 
-          onSend={handleSendMessage} 
-          placeholder="Ask me to generate or optimize SQL..." 
-          disabled={isLoading}
-        />
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+        <div className="flex-1 overflow-y-auto" style={{
+          backgroundColor: 'var(--vscode-editor-background)',
+        }}>
+          <ChatContainer messages={messages} />
+        </div>
+        <div className="flex-none" style={{
+          borderTop: '1px solid var(--vscode-panel-border)',
+          backgroundColor: 'var(--vscode-editor-background)',
+        }}>
+          <ChatInput 
+            onSend={handleSendMessage} 
+            placeholder="Ask me to generate or optimize SQL..." 
+            disabled={isLoading}
+          />
+        </div>
       </div>
     </div>
   );

@@ -28,35 +28,33 @@ const ChatInput: React.FC<ChatInputProps> = ({
   };
 
   return (
-    <div className="border-t p-4" style={{ 
-      backgroundColor: 'var(--vscode-sideBar-background)',
-      borderColor: 'var(--vscode-panel-border)'
-    }}>
-      <div className="flex space-x-3">
+    <div className="p-4">
+      <div className="flex gap-3">
         <textarea
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyPress={handleKeyPress}
           placeholder={placeholder}
           disabled={disabled}
-          className="flex-1 min-h-[60px] max-h-[120px] p-2 rounded"
+          rows={1}
+          className="flex-1 resize-none rounded-md px-3 py-2"
           style={{
             backgroundColor: 'var(--vscode-input-background)',
             color: 'var(--vscode-input-foreground)',
-            borderColor: 'var(--vscode-input-border)',
+            border: '1px solid var(--vscode-input-border)',
             fontFamily: 'var(--vscode-font-family)',
             fontSize: 'var(--vscode-font-size, 13px)',
             lineHeight: '1.5',
-            resize: 'vertical',
+            minHeight: '32px',
+            maxHeight: '120px',
             outline: 'none',
-            border: '1px solid',
             opacity: disabled ? 0.5 : 1,
           }}
         />
         <button
           onClick={handleSend}
           disabled={!message.trim() || disabled}
-          className="px-4 py-2 rounded self-end hover:opacity-90 transition-opacity"
+          className="px-3 rounded-md transition-opacity"
           style={{
             backgroundColor: 'var(--vscode-button-background)',
             color: 'var(--vscode-button-foreground)',
