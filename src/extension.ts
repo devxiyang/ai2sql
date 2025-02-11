@@ -5,11 +5,11 @@ import { SidebarProvider } from './SidebarProvider';
 export function activate(context: vscode.ExtensionContext) {
     console.log('AI2SQL extension is now active!');
 
-    const aiService = new AIService(AIService.getConfiguration());
+    const aiService = new AIService();
     const sidebarProvider = new SidebarProvider(context.extensionUri);
 
     context.subscriptions.push(
-        vscode.window.registerWebviewViewProvider("ai2sql.chatView", sidebarProvider)
+        vscode.window.registerWebviewViewProvider("ai2sql-sidebar", sidebarProvider)
     );
 
     // Register the generateSQL command

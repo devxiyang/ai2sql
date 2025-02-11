@@ -10,26 +10,27 @@
     "Other"
   ],
   "activationEvents": [
-    "onView:ai2sql.chatView"
+    "onView:ai2sql-sidebar"
   ],
   "main": "./dist/extension.js",
   "contributes": {
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "ai2sql-sidebar",
+          "id": "ai2sql-sidebar-view",
           "title": "AI2SQL",
           "icon": "media/icon.svg"
         }
       ]
     },
     "views": {
-      "ai2sql-sidebar": [
+      "ai2sql-sidebar-view": [
         {
           "type": "webview",
-          "id": "ai2sql.chatView",
-          "name": "Chat",
-          "icon": "media/icon.svg"
+          "id": "ai2sql-sidebar",
+          "name": "AI2SQL",
+          "icon": "media/icon.svg",
+          "contextualTitle": "AI2SQL"
         }
       ]
     },
@@ -46,15 +47,41 @@
     "configuration": {
       "title": "AI2SQL",
       "properties": {
-        "ai2sql.model": {
+        "ai2sql.provider": {
           "type": "string",
-          "default": "gpt-4",
-          "description": "The AI model to use for SQL generation and optimization"
+          "enum": ["openai", "claude", "deepseek"],
+          "default": "openai",
+          "description": "The AI provider to use for SQL generation and optimization"
         },
-        "ai2sql.apiKey": {
+        "ai2sql.openaiApiKey": {
           "type": "string",
           "default": "",
-          "description": "API key for the AI service"
+          "description": "Your OpenAI API key"
+        },
+        "ai2sql.openaiModel": {
+          "type": "string",
+          "default": "gpt-4",
+          "description": "The OpenAI model to use (e.g. gpt-4, gpt-3.5-turbo)"
+        },
+        "ai2sql.claudeApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Your Anthropic Claude API key"
+        },
+        "ai2sql.claudeModel": {
+          "type": "string",
+          "default": "claude-3-opus-20240229",
+          "description": "The Claude model to use (e.g. claude-3-opus-20240229, claude-3-sonnet-20240229)"
+        },
+        "ai2sql.deepseekApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Your Deepseek API key"
+        },
+        "ai2sql.deepseekModel": {
+          "type": "string",
+          "default": "deepseek-chat",
+          "description": "The Deepseek model to use"
         }
       }
     }
@@ -71,18 +98,21 @@
     "test": "node ./out/test/runTest.js"
   },
   "devDependencies": {
-    "@types/vscode": "^1.85.0",
     "@types/glob": "^8.1.0",
     "@types/mocha": "^10.0.6",
     "@types/node": "20.x",
+    "@types/vscode": "^1.85.0",
     "@typescript-eslint/eslint-plugin": "^6.15.0",
     "@typescript-eslint/parser": "^6.15.0",
     "eslint": "^8.56.0",
     "glob": "^10.3.10",
     "mocha": "^10.2.0",
-    "typescript": "^5.3.3",
     "ts-loader": "^9.5.1",
+    "typescript": "^5.3.3",
     "webpack": "^5.89.0",
     "webpack-cli": "^5.1.4"
+  },
+  "dependencies": {
+    "openai": "^4.83.0"
   }
-} 
+}

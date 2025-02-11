@@ -7,14 +7,14 @@ const path = require('path');
 //@type {import('webpack').Configuration}
 module.exports = {
   target: 'node',
-  mode: 'none',
-
+  mode: 'production',
   entry: './src/extension.ts',
   output: {
     path: path.resolve(__dirname, 'dist'),
     filename: 'extension.js',
     libraryTarget: 'commonjs2'
   },
+  devtool: 'nosources-source-map',
   externals: {
     vscode: 'commonjs vscode'
   },
@@ -34,7 +34,6 @@ module.exports = {
       }
     ]
   },
-  devtool: 'nosources-source-map',
   infrastructureLogging: {
     level: "log",
   },

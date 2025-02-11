@@ -8,7 +8,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     private _aiService: AIService;
 
     constructor(private readonly _extensionUri: vscode.Uri) {
-        this._aiService = new AIService(AIService.getConfiguration());
+        this._aiService = new AIService();
     }
 
     public resolveWebviewView(
