@@ -41,25 +41,42 @@ const App: React.FC = () => {
         } else if (message.content !== undefined) {  // Changed to check for undefined
           console.log('Content in response:', message.content);
           console.log('Streaming:', message.streaming);
+          
           if (message.streaming) {
             // Update the current response for streaming
             console.log('Updating streaming response:', message.content);
             setCurrentResponse(message.content);
           } else {
-            // Add the final message
-            console.log('Adding final message:', message.content || currentResponse);
+            // This is the final message
+            console.log('Received final message');
             const finalContent = message.content || currentResponse;
+            console.log('Final content:', finalContent);
+            
             if (finalContent) {
+              // Add the message to the chat history
               setMessages(prev => [...prev, {
                 id: Date.now().toString(),
                 content: finalContent,
                 isUser: false,
                 timestamp: new Date().toLocaleTimeString(),
               }]);
+              
+              // Keep the current response until the message is added to the chat
+              setCurrentResponse(finalContent);
+              
+              // Clear loading state
+              setIsLoading(false);
+              
+              // Clear current response after a delay to ensure smooth transition
+              setTimeout(() => {
+                console.log('Clearing current response');
+                setCurrentResponse('');
+              }, 500);
+            } else {
+              console.log('No final content to display');
+              setIsLoading(false);
+              setCurrentResponse('');
             }
-            setIsLoading(false);
-            // Don't clear currentResponse until the message is added
-            setTimeout(() => setCurrentResponse(''), 100);
           }
         }
       }
@@ -72,7 +89,7 @@ const App: React.FC = () => {
       window.removeEventListener('message', handleMessage);
       console.log('Message event listener removed');
     };
-  }, []);
+  }, [currentResponse]); // Add currentResponse to dependencies
 
   const handleSendMessage = (content: string) => {
     if (!content.trim() || isLoading) return;

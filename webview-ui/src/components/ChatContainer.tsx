@@ -17,6 +17,7 @@ interface ChatContainerProps {
 
 const ChatContainer: React.FC<ChatContainerProps> = ({ messages, currentResponse, isLoading }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const hasCurrentResponse = currentResponse.trim().length > 0;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -25,6 +26,13 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ messages, currentResponse
   useEffect(() => {
     scrollToBottom();
   }, [messages, currentResponse]);
+
+  console.log('ChatContainer render:', {
+    messagesCount: messages.length,
+    currentResponse,
+    isLoading,
+    hasCurrentResponse
+  });
 
   const isSQL = (content: string): boolean => {
     const upperContent = content.toUpperCase();
@@ -49,11 +57,11 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ messages, currentResponse
         />
       ))}
       {/* Show streaming response or loading state */}
-      {(isLoading || currentResponse) && (
+      {(isLoading || hasCurrentResponse) && (
         <SQLMessage
-          sql={currentResponse || ''}
-          loading={isLoading}
-          streaming={!!currentResponse}
+          sql={currentResponse}
+          loading={isLoading && !hasCurrentResponse}
+          streaming={hasCurrentResponse}
         />
       )}
       <div ref={messagesEndRef} />
