@@ -107,7 +107,11 @@ const App: React.FC = () => {
       const message = {
         type: content.toLowerCase().includes('optimize') ? 'optimize' : 'generate',
         [content.toLowerCase().includes('optimize') ? 'sql' : 'prompt']: content,
-        stream: true  // Enable streaming
+        stream: true,  // Enable streaming
+        history: messages.map(msg => ({
+          content: msg.content,
+          isUser: msg.isUser
+        }))
       };
       console.log('Posting message to VS Code:', message);
       vscode.postMessage(message);

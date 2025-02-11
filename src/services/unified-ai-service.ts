@@ -1,9 +1,12 @@
 import OpenAI from 'openai';
+import { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 import { BaseAIService, BaseAIServiceConfig } from './base-ai-service';
 
 export class UnifiedAIService implements BaseAIService {
     private client: OpenAI;
     private model: string;
+    private readonly MAX_HISTORY_MESSAGES = 10;  // Maximum number of history messages to include
+    private readonly MAX_HISTORY_TOKENS = 2000;  // Approximate token limit for history
 
     constructor(config: BaseAIServiceConfig) {
         this.client = new OpenAI({
@@ -14,23 +17,41 @@ export class UnifiedAIService implements BaseAIService {
         console.log('AI service initialized with model:', this.model);
     }
 
-    async generateSQL(prompt: string, onStream?: (chunk: string) => void): Promise<string> {
+    private formatChatHistory(messages: { content: string; isUser: boolean }[]): ChatCompletionMessageParam[] {
+        // Take only the last MAX_HISTORY_MESSAGES messages
+        const recentMessages = messages.slice(-this.MAX_HISTORY_MESSAGES);
+        
+        // Convert messages to OpenAI format
+        const formattedMessages = recentMessages.map(msg => ({
+            role: msg.isUser ? 'user' as const : 'assistant' as const,
+            content: msg.content
+        }));
+
+        // Estimate token count (rough estimation: 4 chars ≈ 1 token)
+        let totalLength = formattedMessages.reduce((sum, msg) => sum + msg.content.length, 0);
+        
+        // If total length exceeds our limit, remove older messages until we're under the limit
+        while (totalLength > this.MAX_HISTORY_TOKENS * 4 && formattedMessages.length > 1) {
+            const removed = formattedMessages.shift();
+            if (removed) {
+                totalLength -= removed.content.length;
+            }
+        }
+
+        return formattedMessages;
+    }
+
+    async generateSQL(prompt: string, onStream?: (chunk: string) => void, chatHistory: { content: string; isUser: boolean }[] = []): Promise<string> {
         console.log('Generating SQL with prompt:', prompt);
         console.log('Stream mode:', !!onStream);
-        console.log('Using model:', this.model);
-        console.log('Base URL:', this.client.baseURL);
+        console.log('Chat history length:', chatHistory.length);
         
         try {
-            if (onStream) {
-                console.log('Creating streaming completion...');
-                let stream;
-                try {
-                    stream = await this.client.chat.completions.create({
-                        model: this.model,
-                        messages: [
-                            {
-                                role: "system",
-                                content: `You are a SQL expert. Convert natural language to SQL queries.
+            const formattedHistory = this.formatChatHistory(chatHistory);
+            const messages: ChatCompletionMessageParam[] = [
+                {
+                    role: 'system',
+                    content: `You are a SQL expert. Convert natural language to SQL queries.
 Format the SQL query with the following rules:
 1. Use uppercase for SQL keywords (SELECT, FROM, WHERE, etc.)
 2. Each major clause (SELECT, FROM, WHERE, etc.) should start on a new line
@@ -58,12 +79,21 @@ GROUP BY
   column1
 ORDER BY
   column2 DESC;`
-                            },
-                            {
-                                role: "user",
-                                content: prompt
-                            }
-                        ],
+                },
+                ...formattedHistory,
+                {
+                    role: 'user',
+                    content: prompt
+                }
+            ];
+
+            if (onStream) {
+                console.log('Creating streaming completion with history...');
+                let stream;
+                try {
+                    stream = await this.client.chat.completions.create({
+                        model: this.model,
+                        messages,
                         temperature: 0.7,
                         stream: true,
                         max_tokens: 2000,
@@ -144,43 +174,7 @@ ORDER BY
             } else {
                 const completion = await this.client.chat.completions.create({
                     model: this.model,
-                    messages: [
-                        {
-                            role: "system",
-                            content: `You are a SQL expert. Convert natural language to SQL queries.
-Format the SQL query with the following rules:
-1. Use uppercase for SQL keywords (SELECT, FROM, WHERE, etc.)
-2. Each major clause (SELECT, FROM, WHERE, etc.) should start on a new line
-3. Use proper indentation (2 spaces) for sub-clauses and conditions
-4. Place each column/condition on a new line when there are multiple
-5. Add appropriate spacing around operators and parentheses
-6. Output ONLY the raw SQL query without any markdown formatting, explanations, or code blocks
-7. Do not use \`\`\` or any other markdown syntax
-
-Example output:
-SELECT
-  column1,
-  column2,
-  column3
-FROM
-  table_name
-WHERE
-  condition1 = value1
-  AND condition2 IN (
-    SELECT column
-    FROM another_table
-    WHERE x = y
-  )
-GROUP BY
-  column1
-ORDER BY
-  column2 DESC;`
-                        },
-                        {
-                            role: "user",
-                            content: prompt
-                        }
-                    ],
+                    messages,
                     temperature: 0.7,
                 });
 

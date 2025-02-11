@@ -7,8 +7,16 @@ export interface BaseAIServiceConfig {
 }
 
 export interface BaseAIService {
-    generateSQL(prompt: string, onStream?: (chunk: string) => void): Promise<string>;
-    optimizeSQL(sql: string, onStream?: (chunk: string) => void): Promise<string>;
+    generateSQL(
+        prompt: string,
+        onStream?: (chunk: string) => void,
+        chatHistory?: { content: string; isUser: boolean }[]
+    ): Promise<string>;
+    optimizeSQL(
+        sql: string,
+        onStream?: (chunk: string) => void,
+        chatHistory?: { content: string; isUser: boolean }[]
+    ): Promise<string>;
 }
 
 export enum AIProvider {

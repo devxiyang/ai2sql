@@ -44,6 +44,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                         try {
                             console.log('Generating SQL for:', message.prompt);
                             console.log('Stream mode:', message.stream);
+                            console.log('History length:', message.history?.length || 0);
                             if (message.stream) {
                                 await aiService.generateSQL(message.prompt, (chunk) => {
                                     console.log('Received chunk in callback:', chunk);
@@ -53,7 +54,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                                         streaming: true
                                     });
                                     console.log('Posted streaming message to webview');
-                                });
+                                }, message.history);
                                 console.log('Stream completed, sending final message');
                                 // Send final message to indicate completion
                                 webviewView.webview.postMessage({
@@ -63,7 +64,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                                 });
                                 console.log('Posted completion message to webview');
                             } else {
-                                const sql = await aiService.generateSQL(message.prompt);
+                                const sql = await aiService.generateSQL(message.prompt, undefined, message.history);
                                 console.log('Generated SQL:', sql);
                                 webviewView.webview.postMessage({
                                     type: 'response',
