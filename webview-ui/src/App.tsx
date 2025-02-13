@@ -36,16 +36,17 @@ const App: React.FC = () => {
         const sessionResponse = message as SessionResponse;
         setSessions(sessionResponse.sessions);
         const newActiveId = sessionResponse.activeSessionId;
-        const oldActiveId = activeSessionId;
         setActiveSessionId(newActiveId);
 
-        // Only update messages if we're switching to a different session
-        // or if there are no current messages
-        if (newActiveId !== oldActiveId || messages.length === 0) {
-          const activeSession = sessionResponse.sessions.find(s => s.id === newActiveId);
-          if (activeSession) {
-            setMessages(activeSession.messages);
-          }
+        // Always update messages when session list is updated
+        const activeSession = sessionResponse.sessions.find(s => s.id === newActiveId);
+        if (activeSession) {
+          setMessages(activeSession.messages);
+          setCurrentResponse(''); // Clear any partial response when switching sessions
+        } else {
+          // If no active session found, clear messages
+          setMessages([]);
+          setCurrentResponse('');
         }
       } else if (message.type === 'response') {
         if (message.error) {

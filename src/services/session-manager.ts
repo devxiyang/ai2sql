@@ -125,7 +125,8 @@ export class SessionManager {
       updatedAt: new Date().toISOString()
     };
 
-    this.sessions.push(newSession);
+    // Add new session to the beginning of the array
+    this.sessions.unshift(newSession);
     this.activeSessionId = newSession.id;
     this.saveSessions();
     return newSession;
@@ -175,11 +176,13 @@ export class SessionManager {
       // Update sessions array
       this.sessions.splice(index, 1);
       if (sessionId === this.activeSessionId) {
-        // Set the most recent session as active if there are any sessions left
+        // Set the first session (most recent) as active if there are any sessions left
         if (this.sessions.length > 0) {
-          this.activeSessionId = this.sessions[this.sessions.length - 1].id;
+          this.activeSessionId = this.sessions[0].id;
         } else {
           this.activeSessionId = '';
+          // If no sessions left, create a new one
+          this.createNewSession();
         }
       }
       await this.saveSessions();
