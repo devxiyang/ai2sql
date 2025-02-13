@@ -79,6 +79,13 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
           case 'new_session':
             const newSession = this.sessionManager.createNewSession();
             this.notifySessionUpdate();
+            if (this._view) {
+              this._view.webview.postMessage({
+                type: 'response',
+                content: '',
+                streaming: false
+              });
+            }
             break;
 
           case 'switch_session':

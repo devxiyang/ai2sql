@@ -171,13 +171,11 @@ export class SessionManager {
       // Update sessions array
       this.sessions.splice(index, 1);
       if (sessionId === this.activeSessionId) {
-        // Set the most recent session as active
+        // Set the most recent session as active if there are any sessions left
         if (this.sessions.length > 0) {
           this.activeSessionId = this.sessions[this.sessions.length - 1].id;
         } else {
-          // Create a new session if we deleted the last one
-          const newSession = this.createNewSession();
-          this.activeSessionId = newSession.id;
+          this.activeSessionId = '';
         }
       }
       await this.saveSessions();

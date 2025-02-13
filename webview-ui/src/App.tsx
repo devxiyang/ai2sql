@@ -128,6 +128,10 @@ const App: React.FC = () => {
       setCurrentResponse('');
     }
 
+    // Clear messages and current response immediately
+    setMessages([]);
+    setCurrentResponse('');
+
     vscode.postMessage({ 
       type: 'new_session',
       name: 'New Chat' // Initial name, will be updated after first message
@@ -147,6 +151,10 @@ const App: React.FC = () => {
 
   const handleDeleteSession = (sessionId: string) => {
     vscode.postMessage({ type: 'delete_session', sessionId });
+    if (sessions.length === 1) {
+      setMessages([]);
+      setCurrentResponse('');
+    }
   };
 
   const handleRenameSession = (sessionId: string, name: string) => {
@@ -173,6 +181,9 @@ const App: React.FC = () => {
     };
     messageIdCounter.current += 1;
 
+    // Clear current response first
+    setCurrentResponse('');
+
     // Update messages state immediately and wait for the state to be updated
     await new Promise<void>(resolve => {
       setMessages(prev => {
@@ -193,7 +204,6 @@ const App: React.FC = () => {
     
     // Reset state for new response
     setIsLoading(true);
-    setCurrentResponse('');
 
     // Send message to VS Code extension
     try {
