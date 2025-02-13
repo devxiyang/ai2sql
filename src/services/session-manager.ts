@@ -34,12 +34,14 @@ export class SessionManager {
     
     // Create .ai2sql/chat directory
     this.chatDir = vscode.Uri.joinPath(vscode.Uri.file(workspaceRoot), '.ai2sql', 'chat').fsPath;
-    this.ensureChatDirExists().then(() => {
-      this.loadSessions().then(() => {
-        if (this.sessions.length === 0) {
-          this.createNewSession();
-        }
-      });
+    this.ensureChatDirExists().then(async () => {
+      await this.loadSessions();
+      if (this.sessions.length === 0) {
+        const session = this.createNewSession();
+        this.activeSessionId = session.id;
+      } else if (!this.activeSessionId || !this.sessions.find(s => s.id === this.activeSessionId)) {
+        this.activeSessionId = this.sessions[0].id;
+      }
     }).catch(error => {
       console.error('Error initializing session manager:', error);
     });

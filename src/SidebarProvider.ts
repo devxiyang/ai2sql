@@ -43,6 +43,11 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
       webviewView.webview.html = html;
       console.log('[AI2SQL] HTML set to webview');
 
+      // Send initial session list
+      setTimeout(() => {
+        this.notifySessionUpdate();
+      }, 100);
+
       console.log('[AI2SQL] Setting up message handler');
       webviewView.webview.onDidReceiveMessage(async (data) => {
         console.log('[AI2SQL] Received message:', data);

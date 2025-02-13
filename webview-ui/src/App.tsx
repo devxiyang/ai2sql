@@ -26,6 +26,9 @@ const App: React.FC = () => {
   useEffect(() => {
     console.log('Setting up message event listener');
     
+    // Request session list on mount
+    vscode.postMessage({ type: 'get_sessions' });
+
     const handleMessage = (event: MessageEvent) => {
       const message = event.data;
       
@@ -238,8 +241,14 @@ const App: React.FC = () => {
         <div className="input-container">
           <ChatInput 
             onSend={handleSendMessage} 
+            onInterrupt={() => {
+              vscode.postMessage({ type: 'interrupt' });
+              setIsLoading(false);
+              setCurrentResponse('');
+            }}
             placeholder="Ask me to generate or optimize SQL..." 
             disabled={isLoading}
+            isGenerating={isLoading}
           />
         </div>
       </div>
