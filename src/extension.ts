@@ -14,7 +14,8 @@ export function activate(context: vscode.ExtensionContext) {
         console.log('Selected model:', config.model);
 
         const aiService = new AIService();
-        const sidebarProvider = new SidebarProvider(context.extensionUri);
+        const aiServiceFactory = AIServiceFactory.getInstance();
+        const sidebarProvider = new SidebarProvider(context.extensionUri, aiServiceFactory);
 
         context.subscriptions.push(
             vscode.window.registerWebviewViewProvider("ai2sql-sidebar", sidebarProvider)
