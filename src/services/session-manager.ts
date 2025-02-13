@@ -107,13 +107,14 @@ export class SessionManager {
   }
 
   public createNewSession(): ChatSession {
+    const sessionNumber = this.sessions.length + 1;
     const newSession: ChatSession = {
       id: uuidv4(),
-      name: `Chat ${this.sessions.length + 1}`,
+      name: `Chat ${sessionNumber}`,
       messages: [
         {
           id: uuidv4(),
-          content: 'Welcome to AI2SQL! How can I help you today?',
+          content: `I am your AI SQL assistant. How can I help you with SQL queries today?`,
           isUser: false,
           timestamp: new Date().toISOString()
         }
