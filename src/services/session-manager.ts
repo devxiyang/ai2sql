@@ -150,9 +150,23 @@ export class SessionManager {
     return session;
   }
 
-  public deleteSession(sessionId: string): void {
+  public async deleteSession(sessionId: string): Promise<void> {
     const index = this.sessions.findIndex(s => s.id === sessionId);
     if (index !== -1) {
+      // Delete local file
+      try {
+        const files = await vscode.workspace.fs.readDirectory(vscode.Uri.file(this.chatDir));
+        for (const [name, type] of files) {
+          if (type === vscode.FileType.File && name.includes(sessionId)) {
+            const filePath = vscode.Uri.joinPath(vscode.Uri.file(this.chatDir), name);
+            await vscode.workspace.fs.delete(filePath);
+          }
+        }
+      } catch (error) {
+        console.error(`Error deleting session file for ${sessionId}:`, error);
+      }
+
+      // Update sessions array
       this.sessions.splice(index, 1);
       if (sessionId === this.activeSessionId) {
         // Set the most recent session as active
@@ -164,7 +178,7 @@ export class SessionManager {
           this.activeSessionId = newSession.id;
         }
       }
-      this.saveSessions();
+      await this.saveSessions();
     }
   }
 

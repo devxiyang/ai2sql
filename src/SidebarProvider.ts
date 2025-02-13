@@ -48,6 +48,13 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         console.log('[AI2SQL] Received message:', data);
       try {
         switch (data.type) {
+          case 'interrupt':
+            // Handle interrupt request
+            if (this._aiServiceFactory.currentService) {
+              this._aiServiceFactory.currentService.interrupt();
+            }
+            break;
+
           case 'get_sessions':
             this.notifySessionUpdate();
             break;
@@ -75,7 +82,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             break;
 
           case 'delete_session':
-            this.sessionManager.deleteSession(data.sessionId);
+            await this.sessionManager.deleteSession(data.sessionId);
             this.notifySessionUpdate();
             break;
 

@@ -118,6 +118,13 @@ const App: React.FC = () => {
   };
 
   const handleNewSession = () => {
+    // Interrupt current AI request if any
+    if (isLoading) {
+      vscode.postMessage({ type: 'interrupt' });
+      setIsLoading(false);
+      setCurrentResponse('');
+    }
+
     vscode.postMessage({ 
       type: 'new_session',
       name: 'New Chat' // Initial name, will be updated after first message
@@ -125,6 +132,13 @@ const App: React.FC = () => {
   };
 
   const handleSwitchSession = (sessionId: string) => {
+    // Interrupt current AI request if any
+    if (isLoading) {
+      vscode.postMessage({ type: 'interrupt' });
+      setIsLoading(false);
+      setCurrentResponse('');
+    }
+
     vscode.postMessage({ type: 'switch_session', sessionId });
   };
 
@@ -134,6 +148,14 @@ const App: React.FC = () => {
 
   const handleRenameSession = (sessionId: string, name: string) => {
     vscode.postMessage({ type: 'rename_session', sessionId, name });
+  };
+
+  const handleRetry = () => {
+    // Get the last user message
+    const lastUserMessage = messages.filter(m => m.isUser).pop();
+    if (lastUserMessage) {
+      handleSendMessage(lastUserMessage.content);
+    }
   };
 
   const handleSendMessage = (content: string) => {
@@ -210,6 +232,7 @@ const App: React.FC = () => {
             messages={messages} 
             currentResponse={currentResponse}
             isLoading={isLoading}
+            onRetry={handleRetry}
           />
         </div>
         <div className="input-container">

@@ -17,6 +17,7 @@ export interface BaseAIService {
         onStream?: (chunk: string) => void,
         chatHistory?: { content: string; isUser: boolean }[]
     ): Promise<string>;
+    interrupt(): void;
 }
 
 export enum AIProvider {

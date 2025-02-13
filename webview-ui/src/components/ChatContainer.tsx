@@ -13,9 +13,10 @@ interface ChatContainerProps {
   messages: Message[];
   currentResponse: string;
   isLoading: boolean;
+  onRetry?: () => void;
 }
 
-const ChatContainer: React.FC<ChatContainerProps> = ({ messages, currentResponse, isLoading }) => {
+const ChatContainer: React.FC<ChatContainerProps> = ({ messages, currentResponse, isLoading, onRetry }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasCurrentResponse = currentResponse.trim().length > 0;
 
@@ -58,6 +59,7 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ messages, currentResponse
           isUser={message.isUser}
           timestamp={message.timestamp}
           streaming={false}
+          onRetry={!message.isUser && message.content.toLowerCase().includes('error') ? onRetry : undefined}
         />
       ))}
       {/* Show loading state or streaming response */}

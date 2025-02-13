@@ -7,6 +7,7 @@ interface ChatMessageProps {
   isUser: boolean;
   timestamp?: string;
   streaming?: boolean;
+  onRetry?: () => void;
 }
 
 // Add the animation styles to the component
@@ -78,7 +79,7 @@ const ThinkingAnimation = () => {
   );
 };
 
-const ChatMessage: React.FC<ChatMessageProps> = ({ message, isUser, timestamp, streaming = false }) => {
+const ChatMessage: React.FC<ChatMessageProps> = ({ message, isUser, timestamp, streaming = false, onRetry }) => {
   const isSQL = !isUser && (
     message.includes('SELECT') ||
     message.includes('INSERT') ||
@@ -106,6 +107,20 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, isUser, timestamp, s
               fontSize: 'var(--vscode-font-size, 13px)',
               fontFamily: 'var(--vscode-font-family)',
             }}>
+              {!isUser && message.toLowerCase().includes('error') && onRetry && (
+                <div className="error-message">
+                  <div className="error-icon">⚠️</div>
+                  <div className="error-content">
+                    <div>AI生成失败，请重试</div>
+                    <button className="retry-button" onClick={onRetry}>
+                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      重试
+                    </button>
+                  </div>
+                </div>
+              )}
               {isGenerating ? (
                 <div className="flex items-center">
                   <span style={{ color: 'var(--vscode-button-background)' }}>AI is thinking</span>

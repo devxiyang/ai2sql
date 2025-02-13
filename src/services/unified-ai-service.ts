@@ -7,6 +7,7 @@ export class UnifiedAIService implements BaseAIService {
     private model: string;
     private readonly MAX_TOKENS = 4000;
     private readonly STREAM_TIMEOUT = 60000; // 60 seconds timeout
+    private currentAbortController: AbortController | null = null;
     private readonly SYSTEM_PROMPTS = {
         sql: `You are a SQL expert. Convert natural language to SQL queries.
 Follow these rules:
@@ -41,6 +42,13 @@ Format your response in Markdown:
         });
         this.model = config.model;
         console.log('UnifiedAIService initialized with model:', this.model);
+    }
+
+    public interrupt(): void {
+        if (this.currentAbortController) {
+            this.currentAbortController.abort();
+            this.currentAbortController = null;
+        }
     }
 
     private async processStream(
@@ -123,6 +131,8 @@ Format your response in Markdown:
                 chatHistory
             );
 
+            this.currentAbortController = new AbortController();
+
             if (onStream) {
                 const stream = await this.client.chat.completions.create({
                     model: this.model,
@@ -130,7 +140,7 @@ Format your response in Markdown:
                     stream: true,
                     temperature: 0.3,
                     max_tokens: this.MAX_TOKENS
-                });
+                }, { signal: this.currentAbortController.signal });
 
                 return this.processStream(stream, onStream);
             } else {
@@ -139,7 +149,7 @@ Format your response in Markdown:
                     messages,
                     temperature: 0.3,
                     max_tokens: this.MAX_TOKENS
-                });
+                }, { signal: this.currentAbortController.signal });
 
                 const sql = completion.choices[0]?.message?.content;
                 if (!sql) {
@@ -164,6 +174,8 @@ Format your response in Markdown:
         try {
             const messages = this.formatMessages(this.SYSTEM_PROMPTS.optimization, sql, chatHistory);
 
+            this.currentAbortController = new AbortController();
+
             if (onStream) {
                 const stream = await this.client.chat.completions.create({
                     model: this.model,
@@ -171,7 +183,7 @@ Format your response in Markdown:
                     stream: true,
                     temperature: 0.3,
                     max_tokens: this.MAX_TOKENS
-                });
+                }, { signal: this.currentAbortController.signal });
 
                 return this.processStream(stream, onStream);
             } else {
@@ -180,7 +192,7 @@ Format your response in Markdown:
                     messages,
                     temperature: 0.3,
                     max_tokens: this.MAX_TOKENS
-                });
+                }, { signal: this.currentAbortController.signal });
 
                 const optimized = completion.choices[0]?.message?.content;
                 if (!optimized) {
