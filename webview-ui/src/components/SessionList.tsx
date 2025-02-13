@@ -46,7 +46,9 @@ const SessionList: React.FC<SessionListProps> = ({
         New Chat
       </button>
       <div className="flex flex-col gap-1">
-        {sessions.map((session) => (
+        {sessions
+          .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+          .map((session) => (
           <div
             key={session.id}
             className={`session-item ${session.id === activeSessionId ? 'active' : ''}`}
@@ -70,7 +72,12 @@ const SessionList: React.FC<SessionListProps> = ({
                   autoFocus
                 />
               ) : (
-                <div className="truncate">{session.name}</div>
+                <div className="flex flex-col">
+                  <div className="truncate">{session.name}</div>
+                  <div className="text-xs opacity-60">
+                    {new Date(session.updatedAt).toLocaleString()}
+                  </div>
+                </div>
               )}
             </div>
             <div className="session-item-actions">
