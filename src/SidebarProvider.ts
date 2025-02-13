@@ -2,22 +2,19 @@ import * as vscode from 'vscode';
 import { AIServiceFactory } from './services/ai-service-factory';
 import { getNonce } from './utils';
 
-interface ChatState {
-  id: string;
-  messages: Array<{
-    content: string;
-    isUser: boolean;
-  }>;
-}
+import { SessionManager } from './services/session-manager';
 
 export class SidebarProvider implements vscode.WebviewViewProvider {
   _view?: vscode.WebviewView;
-  private chatStates: Map<string, ChatState> = new Map();
+  private sessionManager: SessionManager;
 
   constructor(
     private readonly _extensionUri: vscode.Uri,
-    private readonly _aiServiceFactory: AIServiceFactory
-  ) {}
+    private readonly _aiServiceFactory: AIServiceFactory,
+    context: vscode.ExtensionContext
+  ) {
+    this.sessionManager = new SessionManager(context);
+  }
 
   public resolveWebviewView(
     webviewView: vscode.WebviewView,
@@ -46,23 +43,39 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         console.log('[AI2SQL] Received message:', data);
       try {
         switch (data.type) {
+          case 'new_session':
+            const newSession = this.sessionManager.createNewSession();
+            this.notifySessionUpdate();
+            break;
+
+          case 'switch_session':
+            this.sessionManager.setActiveSession(data.sessionId);
+            this.notifySessionUpdate();
+            break;
+
+          case 'delete_session':
+            this.sessionManager.deleteSession(data.sessionId);
+            this.notifySessionUpdate();
+            break;
+
+          case 'rename_session':
+            this.sessionManager.renameSession(data.sessionId, data.name);
+            this.notifySessionUpdate();
+            break;
+
           case 'generate':
             try {
               console.log('[AI2SQL] Getting AI service for SQL generation');
               const aiService = await this._aiServiceFactory.getService();
               
-              // Get or create chat state
-              let chatState = this.chatStates.get(data.chatId);
-              if (!chatState) {
-                chatState = {
-                  id: data.chatId,
-                  messages: []
-                };
-                this.chatStates.set(data.chatId, chatState);
-              }
+              // Add user message to session
+              this.sessionManager.addMessageToActiveSession(data.prompt, true);
 
-              // Update chat state with new message
-              chatState.messages = [...data.history];
+              // Get session messages
+              const session = this.sessionManager.getActiveSession();
+              if (!session) {
+                throw new Error('No active session');
+              }
 
               // Generate SQL with streaming
               if (data.stream) {
@@ -78,7 +91,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                       });
                     }
                   },
-                  chatState.messages
+                  session.messages.map(m => ({ content: m.content, isUser: m.isUser }))
                 );
                 
                 // Send final message to indicate stream end
@@ -91,7 +104,11 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 console.log('[AI2SQL] Streaming SQL generation completed');
               } else {
                 console.log('[AI2SQL] Starting non-streaming SQL generation');
-                const sql = await aiService.generateSQL(data.prompt, undefined, chatState.messages);
+                const sql = await aiService.generateSQL(
+                  data.prompt,
+                  undefined,
+                  session.messages.map(m => ({ content: m.content, isUser: m.isUser }))
+                );
                 if (this._view) {
                   this._view.webview.postMessage({
                     type: 'response',
@@ -100,6 +117,8 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                   });
                 }
                 console.log('[AI2SQL] Non-streaming SQL generation completed');
+                // Add AI response to session
+                this.sessionManager.addMessageToActiveSession(sql, false);
               }
             } catch (error) {
               console.error('[AI2SQL] Error generating SQL:', error);
@@ -117,18 +136,14 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
               console.log('[AI2SQL] Getting AI service for SQL optimization');
               const aiService = await this._aiServiceFactory.getService();
               
-              // Get or create chat state
-              let chatState = this.chatStates.get(data.chatId);
-              if (!chatState) {
-                chatState = {
-                  id: data.chatId,
-                  messages: []
-                };
-                this.chatStates.set(data.chatId, chatState);
-              }
+              // Add user message to session
+              this.sessionManager.addMessageToActiveSession(data.sql, true);
 
-              // Update chat state with new message
-              chatState.messages = [...data.history];
+              // Get session messages
+              const session = this.sessionManager.getActiveSession();
+              if (!session) {
+                throw new Error('No active session');
+              }
 
               // Optimize SQL with streaming
               if (data.stream) {
@@ -165,6 +180,8 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                   });
                 }
                 console.log('[AI2SQL] Non-streaming SQL optimization completed');
+                // Add AI response to session
+                this.sessionManager.addMessageToActiveSession(optimizedSql, false);
               }
             } catch (error) {
               console.error('[AI2SQL] Error optimizing SQL:', error);
@@ -194,6 +211,16 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
       console.error('[AI2SQL] Error in resolveWebviewView:', error);
       vscode.window.showErrorMessage(`Failed to initialize AI2SQL: ${error instanceof Error ? error.message : 'Unknown error'}`);
       throw error;
+    }
+  }
+
+  private notifySessionUpdate(): void {
+    if (this._view) {
+      this._view.webview.postMessage({
+        type: 'session_list',
+        sessions: this.sessionManager.getAllSessions(),
+        activeSessionId: this.sessionManager.getActiveSessionId()
+      });
     }
   }
 

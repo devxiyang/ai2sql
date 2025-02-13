@@ -1,12 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ChatContainer from './components/ChatContainer';
 import ChatInput from './components/ChatInput';
-import { Message, AIResponse } from './types/messages';
+import SessionList from './components/SessionList';
+import { Message } from './types/messages';
+import { ChatSession, SessionResponse } from './types/session';
 
 // Acquire VS Code API
 const vscode = acquireVsCodeApi();
 
 const App: React.FC = () => {
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [activeSessionId, setActiveSessionId] = useState<string>('');
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -25,7 +29,15 @@ const App: React.FC = () => {
     const handleMessage = (event: MessageEvent) => {
       const message = event.data;
       
-      if (message && message.type === 'response') {
+      if (message.type === 'session_list') {
+        const sessionResponse = message as SessionResponse;
+        setSessions(sessionResponse.sessions);
+        setActiveSessionId(sessionResponse.activeSessionId);
+        const activeSession = sessionResponse.sessions.find(s => s.id === sessionResponse.activeSessionId);
+        if (activeSession) {
+          setMessages(activeSession.messages);
+        }
+      } else if (message.type === 'response') {
         if (message.error) {
           console.error('Error in response:', message.error);
           setMessages(prev => [...prev, {
@@ -71,6 +83,22 @@ const App: React.FC = () => {
     };
   }, [currentResponse]);
 
+  const handleNewSession = () => {
+    vscode.postMessage({ type: 'new_session' });
+  };
+
+  const handleSwitchSession = (sessionId: string) => {
+    vscode.postMessage({ type: 'switch_session', sessionId });
+  };
+
+  const handleDeleteSession = (sessionId: string) => {
+    vscode.postMessage({ type: 'delete_session', sessionId });
+  };
+
+  const handleRenameSession = (sessionId: string, name: string) => {
+    vscode.postMessage({ type: 'rename_session', sessionId, name });
+  };
+
   const handleSendMessage = (content: string) => {
     if (!content.trim() || isLoading) return;
     
@@ -114,11 +142,16 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen">
-      <div className="flex-none border-b" style={{ 
-        backgroundColor: 'var(--vscode-sideBar-background)',
-        borderColor: 'var(--vscode-panel-border)',
-      }}>
+    <div className="flex h-full">
+      <div className="w-64 border-r border-vscode-panel-border">
+        <SessionList
+          sessions={sessions}
+          activeSessionId={activeSessionId}
+          onNewSession={handleNewSession}
+          onSwitchSession={handleSwitchSession}
+          onDeleteSession={handleDeleteSession}
+          onRenameSession={handleRenameSession}
+        />
       </div>
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
         <div className="flex-1 overflow-y-auto" style={{
@@ -145,4 +178,4 @@ const App: React.FC = () => {
   );
 };
 
-export default App; 
+export default App;
