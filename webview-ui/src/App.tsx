@@ -38,12 +38,12 @@ const App: React.FC = () => {
         const newActiveId = sessionResponse.activeSessionId;
         setActiveSessionId(newActiveId);
 
-        // Always update messages when session list is updated
+        // Only update messages if we're switching sessions or if there are no messages
         const activeSession = sessionResponse.sessions.find(s => s.id === newActiveId);
-        if (activeSession) {
+        if (activeSession && (newActiveId !== activeSessionId || messages.length === 0)) {
           setMessages(activeSession.messages);
           setCurrentResponse(''); // Clear any partial response when switching sessions
-        } else {
+        } else if (!activeSession) {
           // If no active session found, clear messages
           setMessages([]);
           setCurrentResponse('');
@@ -191,30 +191,19 @@ const App: React.FC = () => {
 
     // Clear current response first
     setCurrentResponse('');
-
-    // Update messages state immediately and wait for the state to be updated
-    await new Promise<void>(resolve => {
-      setMessages(prev => {
-        const updatedMessages = [...prev, newMessage];
-        resolve();
-        return updatedMessages;
-      });
-    });
-    
-    // If this is the first user message, update session name
-    if (!messages.some(m => m.isUser)) {
-      vscode.postMessage({
-        type: 'rename_session',
-        sessionId: activeSessionId,
-        name: generateSessionName([newMessage])
-      });
-    }
-    
-    // Reset state for new response
     setIsLoading(true);
 
-    // Send message to VS Code extension
+    // Send message to VS Code extension first
     try {
+      // If this is the first user message, update session name
+      if (!messages.some(m => m.isUser)) {
+        vscode.postMessage({
+          type: 'rename_session',
+          sessionId: activeSessionId,
+          name: generateSessionName([newMessage])
+        });
+      }
+
       const message = {
         type: content.toLowerCase().includes('optimize') ? 'optimize' : 'generate',
         [content.toLowerCase().includes('optimize') ? 'sql' : 'prompt']: content,
@@ -224,6 +213,11 @@ const App: React.FC = () => {
           isUser: msg.isUser
         }))
       };
+      
+      // Update messages state after sending to backend
+      setMessages(prev => [...prev, newMessage]);
+      
+      // Send the message to backend
       vscode.postMessage(message);
     } catch (error) {
       console.error('Error sending message:', error);
