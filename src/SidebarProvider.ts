@@ -24,12 +24,17 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     console.log('[AI2SQL] Resolving webview view');
     try {
       this._view = webviewView;
-
-      console.log('[AI2SQL] Setting webview options');
+      
+      // Set webview options
       webviewView.webview.options = {
         enableScripts: true,
         localResourceRoots: [this._extensionUri],
       };
+      
+      // Set description
+      webviewView.description = "AI SQL Assistant";
+      
+      console.log('[AI2SQL] Setting webview options');
       console.log('[AI2SQL] Webview options set successfully');
 
       console.log('[AI2SQL] Getting HTML for webview');
@@ -271,7 +276,10 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
           <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}' 'unsafe-eval'; connect-src 'self';">
           <title>AI2SQL</title>
           <style>
-            html, body, #root {
+            * {
+              box-sizing: border-box;
+            }
+            html, body {
               height: 100%;
               margin: 0;
               padding: 0;
@@ -281,6 +289,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
               font-size: var(--vscode-font-size);
             }
             #root {
+              height: 100%;
               display: flex;
               flex-direction: column;
             }

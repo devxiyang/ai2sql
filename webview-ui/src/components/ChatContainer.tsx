@@ -50,7 +50,7 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ messages, currentResponse
   };
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 space-y-4">
+    <div className="chat-messages">
       {messages.map((message) => (
         <ChatMessage
           key={message.id}

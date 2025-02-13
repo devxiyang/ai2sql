@@ -160,31 +160,16 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="flex h-full">
-      <div className="w-64 border-r border-vscode-panel-border">
-        <SessionList
-          sessions={sessions}
-          activeSessionId={activeSessionId}
-          onNewSession={handleNewSession}
-          onSwitchSession={handleSwitchSession}
-          onDeleteSession={handleDeleteSession}
-          onRenameSession={handleRenameSession}
-        />
-      </div>
-      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-        <div className="flex-1 overflow-y-auto" style={{
-          backgroundColor: 'var(--vscode-editor-background)',
-        }}>
+    <div className="app-container">
+      <div className="main-content">
+        <div className="chat-container">
           <ChatContainer 
             messages={messages} 
             currentResponse={currentResponse}
             isLoading={isLoading}
           />
         </div>
-        <div className="flex-none" style={{
-          borderTop: '1px solid var(--vscode-panel-border)',
-          backgroundColor: 'var(--vscode-editor-background)',
-        }}>
+        <div className="input-container">
           <ChatInput 
             onSend={handleSendMessage} 
             placeholder="Ask me to generate or optimize SQL..." 
