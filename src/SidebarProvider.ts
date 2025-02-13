@@ -64,18 +64,6 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             this.notifySessionUpdate();
             break;
 
-          case 'clear_sessions':
-            await this.sessionManager.clearAllSessions();
-            this.notifySessionUpdate();
-            if (this._view) {
-              this._view.webview.postMessage({
-                type: 'response',
-                content: 'All sessions cleared. Starting fresh!',
-                isUser: false
-              });
-            }
-            break;
-
           case 'new_session':
             const newSession = this.sessionManager.createNewSession();
             this.notifySessionUpdate();

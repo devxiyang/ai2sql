@@ -25,13 +25,13 @@ export class SessionManager {
 
   constructor(context: vscode.ExtensionContext) {
     this.context = context;
-    
+
     // Get workspace root
     const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
     if (!workspaceRoot) {
       throw new Error('No workspace folder found');
     }
-    
+
     // Create .ai2sql/chat directory
     this.chatDir = vscode.Uri.joinPath(vscode.Uri.file(workspaceRoot), '.ai2sql', 'chat').fsPath;
     this.ensureChatDirExists().then(async () => {
@@ -61,7 +61,7 @@ export class SessionManager {
       // Read all files in the chat directory
       const entries = await vscode.workspace.fs.readDirectory(vscode.Uri.file(this.chatDir));
       this.sessions = [];
-      
+
       for (const [name, type] of entries) {
         if (type === vscode.FileType.File && name.endsWith('.json')) {
           try {
@@ -77,7 +77,7 @@ export class SessionManager {
           }
         }
       }
-      
+
       // Set most recent as active
       if (this.sessions.length > 0) {
         const mostRecent = this.sessions.reduce((prev, current) => {
@@ -139,6 +139,10 @@ export class SessionManager {
     return this.getSession(this.activeSessionId);
   }
 
+  public getActiveSessionId(): string {
+    return this.activeSessionId;
+  }
+
   public getAllSessions(): ChatSession[] {
     return this.sessions;
   }
@@ -198,53 +202,34 @@ export class SessionManager {
       console.warn('No active session found, creating new session');
       const newSession = this.createNewSession();
       this.activeSessionId = newSession.id;
-    }
-
-    const activeSession = this.getActiveSession();
-    if (activeSession) {
-      console.log(`Adding message to session ${activeSession.id}`);
-      // Add new message
-      activeSession.messages.push({
+      // Add the message after the welcome message
+      newSession.messages.push({
         id: uuidv4(),
         content,
         isUser,
         timestamp: new Date().toISOString()
       });
-      
-      // Keep only the most recent messages
-      if (activeSession.messages.length > this.MAX_MESSAGES_PER_SESSION) {
-        console.log(`Trimming session ${activeSession.id} messages from ${activeSession.messages.length} to ${this.MAX_MESSAGES_PER_SESSION}`);
-        activeSession.messages = activeSession.messages.slice(-this.MAX_MESSAGES_PER_SESSION);
-      }
-      
-      activeSession.updatedAt = new Date().toISOString();
+      newSession.updatedAt = new Date().toISOString();
       this.saveSessions();
+      return;
     }
-  }
 
-  public getActiveSessionId(): string {
-    return this.activeSessionId;
-  }
+    console.log(`Adding message to session ${session.id}`);
+    // Add new message
+    session.messages.push({
+      id: uuidv4(),
+      content,
+      isUser,
+      timestamp: new Date().toISOString()
+    });
 
-  public async clearAllSessions(): Promise<void> {
-    console.log('Clearing all sessions');
-    try {
-      // Delete all files in the chat directory
-      const files = await vscode.workspace.fs.readDirectory(vscode.Uri.file(this.chatDir));
-      for (const [name, type] of files) {
-        if (type === vscode.FileType.File && name.endsWith('.json')) {
-          const filePath = vscode.Uri.joinPath(vscode.Uri.file(this.chatDir), name);
-          await vscode.workspace.fs.delete(filePath);
-        }
-      }
-      
-      // Reset session state
-      this.sessions = [];
-      this.activeSessionId = '';
-      this.createNewSession();
-    } catch (error) {
-      console.error('Error clearing sessions:', error);
-      throw error;
+    // Keep only the most recent messages
+    if (session.messages.length > this.MAX_MESSAGES_PER_SESSION) {
+      console.log(`Trimming session ${session.id} messages from ${session.messages.length} to ${this.MAX_MESSAGES_PER_SESSION}`);
+      session.messages = session.messages.slice(-this.MAX_MESSAGES_PER_SESSION);
     }
+
+    session.updatedAt = new Date().toISOString();
+    this.saveSessions();
   }
 }
