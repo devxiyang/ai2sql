@@ -7,149 +7,33 @@ interface ChatHistoryMessage {
     isUser: boolean;
 }
 
-interface ChatSummaryCache {
-    summary: string;
-    messageCount: number;
-}
-
 export class UnifiedAIService implements BaseAIService {
     private client: OpenAI;
     private model: string;
-    private summaryCache: ChatSummaryCache | null = null;
-    private readonly MAX_HISTORY_MESSAGES = 10;  // Maximum number of history messages to include
-    private readonly MAX_HISTORY_TOKENS = 2000;  // Maximum tokens for history messages
-    private readonly STREAM_TIMEOUT = 1800000;   // 30 minutes timeout for streaming (Deepseek max)
-    private readonly INITIAL_CHUNK_TIMEOUT = 120000;  // 2 minutes timeout for first chunk
-    private readonly CHUNK_TIMEOUT = 30000;      // 30 seconds timeout for subsequent chunks
-    private readonly RETRY_COUNT = 3;            // Number of retries for failed requests
-    private readonly SUMMARY_THRESHOLD = 20;      // Number of messages before summarizing
+    private readonly MAX_HISTORY_MESSAGES = 50;  // Increased due to 64k context window
+    private readonly STREAM_TIMEOUT = 3600000;   // 60 minutes timeout for streaming
+    private readonly INITIAL_CHUNK_TIMEOUT = 300000;  // 5 minutes timeout for first chunk
+    private readonly CHUNK_TIMEOUT = 60000;      // 60 seconds timeout for subsequent chunks
 
     constructor(config: BaseAIServiceConfig) {
         this.client = new OpenAI({
             apiKey: config.apiKey,
             baseURL: config.baseURL,
             timeout: this.STREAM_TIMEOUT,
-            maxRetries: this.RETRY_COUNT,
+            maxRetries: 0,  // Disable retries
         });
         this.model = config.model;
         console.log('AI service initialized with model:', this.model);
     }
 
-    private async summarizeChatHistory(messages: ChatHistoryMessage[]): Promise<ChatCompletionMessageParam[]> {
-        // If we have less messages than threshold, just return them directly
-        if (messages.length <= this.SUMMARY_THRESHOLD) {
-            return messages.map(msg => ({
-                role: msg.isUser ? 'user' as const : 'assistant' as const,
-                content: msg.content || ''
-            }));
-        }
-
-        // Get the most recent message
-        const latestMessage = messages[messages.length - 1];
-        const messagesToSummarize = messages.slice(0, -1);
-
-        // If we have a cached summary and the number of messages matches
-        if (this.summaryCache && this.summaryCache.messageCount === messagesToSummarize.length) {
-            console.log('Using cached summary for', messagesToSummarize.length, 'messages');
-            return [
-                {
-                    role: 'assistant',
-                    content: this.summaryCache.summary
-                },
-                {
-                    role: latestMessage.isUser ? 'user' as const : 'assistant' as const,
-                    content: latestMessage.content || ''
-                }
-            ];
-        }
-
-        try {
-            const completion = await this.client.chat.completions.create({
-                model: this.model,
-                messages: [
-                    {
-                        role: 'system',
-                        content: `You are a SQL conversation summarizer. Summarize the conversation history while preserving:
-1. Important table names and their relationships
-2. Key business requirements
-3. Any specific SQL patterns or preferences mentioned
-4. Critical constraints or conditions
-
-Keep the summary concise but informative. Format in Markdown with bullet points.`
-                    },
-                    ...messagesToSummarize.map(msg => ({
-                        role: msg.isUser ? 'user' as const : 'assistant' as const,
-                        content: msg.content || ''
-                    }))
-                ],
-                temperature: 0.3,
-            });
-
-            const summary = completion.choices[0]?.message?.content || '';
-            if (!summary) {
-                console.warn('Failed to generate summary, falling back to recent messages only');
-                return [
-                    {
-                        role: latestMessage.isUser ? 'user' as const : 'assistant' as const,
-                        content: latestMessage.content || ''
-                    }
-                ];
-            }
-
-            // Cache the new summary
-            this.summaryCache = {
-                summary: `Previous conversation summary:\n${summary}`,
-                messageCount: messagesToSummarize.length
-            };
-            console.log('Cached new summary for', messagesToSummarize.length, 'messages');
-
-            // Return the summary as an assistant message, followed by the latest message
-            return [
-                {
-                    role: 'assistant',
-                    content: this.summaryCache.summary
-                },
-                {
-                    role: latestMessage.isUser ? 'user' as const : 'assistant' as const,
-                    content: latestMessage.content || ''
-                }
-            ];
-        } catch (error) {
-            console.warn('Error summarizing chat history:', error);
-            // Fallback: return only the latest message
-            return [
-                {
-                    role: latestMessage.isUser ? 'user' as const : 'assistant' as const,
-                    content: latestMessage.content || ''
-                }
-            ];
-        }
-    }
-
-    private async formatChatHistory(messages: ChatHistoryMessage[]): Promise<ChatCompletionMessageParam[]> {
-        // Take only the last MAX_HISTORY_MESSAGES messages
+    private formatChatHistory(messages: ChatHistoryMessage[]): ChatCompletionMessageParam[] {
+        // Take only the last MAX_HISTORY_MESSAGES messages to stay within context window
         const recentMessages = messages.slice(-this.MAX_HISTORY_MESSAGES);
         
-        // Get summarized messages
-        const formattedMessages = await this.summarizeChatHistory(recentMessages);
-        
-        // Estimate token count (rough estimation: 4 chars ≈ 1 token)
-        let totalLength = formattedMessages.reduce((sum, msg) => sum + (msg.content?.length || 0), 0);
-        const estimatedTokens = Math.ceil(totalLength / 4);
-        
-        // If still too long, remove older messages but keep the summary
-        while (estimatedTokens > this.MAX_HISTORY_TOKENS && formattedMessages.length > 2) {
-            // Always keep the summary and the most recent user message
-            if (formattedMessages.length === 2 && formattedMessages[1].role === 'user') {
-                break;
-            }
-            // Remove the oldest message after summary
-            formattedMessages.splice(1, 1);
-            // Recalculate total length
-            totalLength = formattedMessages.reduce((sum, msg) => sum + (msg.content?.length || 0), 0);
-        }
-
-        return formattedMessages;
+        return recentMessages.map(msg => ({
+            role: msg.isUser ? 'user' as const : 'assistant' as const,
+            content: msg.content || ''
+        }));
     }
 
     private async handleStream(
@@ -211,10 +95,15 @@ Keep the summary concise but informative. Format in Markdown with bullet points.
         chatHistory: ChatHistoryMessage[] = []
     ): Promise<string> {
         console.log('Generating SQL with prompt:', prompt);
+        
+        if (!prompt || !prompt.trim()) {
+            throw new Error('Prompt cannot be empty');
+        }
+        
         console.log('Chat history length:', chatHistory.length);
         
         try {
-            const formattedHistory = await this.formatChatHistory(chatHistory);
+            const formattedHistory = this.formatChatHistory(chatHistory);
             console.log('Formatted history length:', formattedHistory.length);
             
             const messages: ChatCompletionMessageParam[] = [
@@ -266,7 +155,7 @@ This query will:
                 ...formattedHistory,
                 {
                     role: 'user',
-                    content: prompt || ''
+                    content: prompt.trim()
                 }
             ];
 
@@ -295,7 +184,11 @@ This query will:
             }
         } catch (error) {
             console.error('Error generating SQL:', error);
-            throw error;
+            if (error instanceof Error) {
+                throw error;
+            } else {
+                throw new Error('Failed to generate SQL');
+            }
         }
     }
 
