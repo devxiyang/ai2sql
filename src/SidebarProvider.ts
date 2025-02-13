@@ -48,6 +48,10 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         console.log('[AI2SQL] Received message:', data);
       try {
         switch (data.type) {
+          case 'get_sessions':
+            this.notifySessionUpdate();
+            break;
+
           case 'clear_sessions':
             await this.sessionManager.clearAllSessions();
             this.notifySessionUpdate();

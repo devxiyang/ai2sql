@@ -38,11 +38,8 @@ const SessionList: React.FC<SessionListProps> = ({
   };
 
   return (
-    <div className="flex flex-col gap-2 p-2">
-      <button
-        className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md bg-vscode-button-background hover:bg-vscode-button-hoverBackground"
-        onClick={onNewSession}
-      >
+    <div className="session-list">
+      <button className="new-chat-button" onClick={onNewSession}>
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
         </svg>
@@ -52,14 +49,10 @@ const SessionList: React.FC<SessionListProps> = ({
         {sessions.map((session) => (
           <div
             key={session.id}
-            className={`group flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer ${
-              session.id === activeSessionId
-                ? 'bg-vscode-list-activeSelectionBackground text-vscode-list-activeSelectionForeground'
-                : 'hover:bg-vscode-list-hoverBackground'
-            }`}
+            className={`session-item ${session.id === activeSessionId ? 'active' : ''}`}
           >
             <div
-              className="flex-1 overflow-hidden"
+              className="session-item-name"
               onClick={() => onSwitchSession(session.id)}
             >
               {editingSessionId === session.id ? (
@@ -80,10 +73,10 @@ const SessionList: React.FC<SessionListProps> = ({
                 <div className="truncate">{session.name}</div>
               )}
             </div>
-            <div className="flex gap-1 opacity-0 group-hover:opacity-100">
+            <div className="session-item-actions">
               <button
                 onClick={() => handleRename(session.id)}
-                className="p-1 rounded hover:bg-vscode-button-hoverBackground"
+                className="session-action-button"
                 title="Rename"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -92,7 +85,7 @@ const SessionList: React.FC<SessionListProps> = ({
               </button>
               <button
                 onClick={() => onDeleteSession(session.id)}
-                className="p-1 rounded hover:bg-vscode-button-hoverBackground"
+                className="session-action-button"
                 title="Delete"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

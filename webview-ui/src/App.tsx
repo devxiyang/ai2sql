@@ -101,8 +101,27 @@ const App: React.FC = () => {
     };
   }, []);
 
+  // Load sessions on mount
+  useEffect(() => {
+    vscode.postMessage({ type: 'get_sessions' });
+  }, []);
+
+  const generateSessionName = (messages: Message[]) => {
+    // Find first user message
+    const firstUserMessage = messages.find(m => m.isUser);
+    if (firstUserMessage) {
+      // Take first 30 characters of the message
+      const name = firstUserMessage.content.slice(0, 30);
+      return name + (firstUserMessage.content.length > 30 ? '...' : '');
+    }
+    return 'New Chat';
+  };
+
   const handleNewSession = () => {
-    vscode.postMessage({ type: 'new_session' });
+    vscode.postMessage({ 
+      type: 'new_session',
+      name: 'New Chat' // Initial name, will be updated after first message
+    });
   };
 
   const handleSwitchSession = (sessionId: string) => {
@@ -121,12 +140,26 @@ const App: React.FC = () => {
     if (!content.trim() || isLoading) return;
     
     // Add user message to chat
-    setMessages(prev => [...prev, {
+    const newMessage = {
       id: messageIdCounter.current.toString(),
       content: content,
       isUser: true,
       timestamp: new Date().toLocaleTimeString(),
-    }]);
+    };
+    
+    setMessages(prev => {
+      const newMessages = [...prev, newMessage];
+      // If this is the first user message, update session name
+      if (!prev.some(m => m.isUser)) {
+        vscode.postMessage({
+          type: 'rename_session',
+          sessionId: activeSessionId,
+          name: generateSessionName([newMessage])
+        });
+      }
+      return newMessages;
+    });
+    
     messageIdCounter.current += 1;
     
     // Reset state for new response
@@ -161,6 +194,16 @@ const App: React.FC = () => {
 
   return (
     <div className="app-container">
+      <div className="app-sidebar">
+        <SessionList
+          sessions={sessions}
+          activeSessionId={activeSessionId}
+          onNewSession={handleNewSession}
+          onSwitchSession={handleSwitchSession}
+          onDeleteSession={handleDeleteSession}
+          onRenameSession={handleRenameSession}
+        />
+      </div>
       <div className="main-content">
         <div className="chat-container">
           <ChatContainer 
