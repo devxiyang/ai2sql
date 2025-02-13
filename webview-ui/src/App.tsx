@@ -36,11 +36,22 @@ const App: React.FC = () => {
         const sessionResponse = message as SessionResponse;
         setSessions(sessionResponse.sessions);
         const newActiveId = sessionResponse.activeSessionId;
+        const oldActiveId = activeSessionId;
         setActiveSessionId(newActiveId);
 
-        // Only update messages if we're switching sessions or if there are no messages
+        // Get the active session
         const activeSession = sessionResponse.sessions.find(s => s.id === newActiveId);
-        if (activeSession && (newActiveId !== activeSessionId || messages.length === 0)) {
+
+        // Update messages in these cases:
+        // 1. No messages in the current view
+        // 2. Switching to a different session
+        // 3. We have messages but they're from a different session
+        const shouldUpdateMessages = 
+          messages.length === 0 || 
+          newActiveId !== oldActiveId || 
+          (activeSession && messages.length !== activeSession.messages.length);
+
+        if (activeSession && shouldUpdateMessages) {
           setMessages(activeSession.messages);
           setCurrentResponse(''); // Clear any partial response when switching sessions
         } else if (!activeSession) {
@@ -195,6 +206,9 @@ const App: React.FC = () => {
 
     // Send message to VS Code extension first
     try {
+      // Update messages state first
+      setMessages(prev => [...prev, newMessage]);
+
       // If this is the first user message, update session name
       if (!messages.some(m => m.isUser)) {
         vscode.postMessage({
@@ -204,6 +218,7 @@ const App: React.FC = () => {
         });
       }
 
+      // Then send the message to backend
       const message = {
         type: content.toLowerCase().includes('optimize') ? 'optimize' : 'generate',
         [content.toLowerCase().includes('optimize') ? 'sql' : 'prompt']: content,
@@ -213,11 +228,6 @@ const App: React.FC = () => {
           isUser: msg.isUser
         }))
       };
-      
-      // Update messages state after sending to backend
-      setMessages(prev => [...prev, newMessage]);
-      
-      // Send the message to backend
       vscode.postMessage(message);
     } catch (error) {
       console.error('Error sending message:', error);

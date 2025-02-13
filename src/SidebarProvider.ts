@@ -99,6 +99,9 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
               // Add user message to session and get active session
               this.sessionManager.addMessageToActiveSession(data.prompt, true);
               
+              // Notify frontend of the updated session immediately
+              this.notifySessionUpdate();
+              
               // Get session messages
               const activeSession = this.sessionManager.getActiveSession();
               if (!activeSession) {
@@ -141,6 +144,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 
                 // Add AI response to session
                 this.sessionManager.addMessageToActiveSession(finalContent, false);
+                this.notifySessionUpdate();
                 console.log('[AI2SQL] Streaming SQL generation completed');
               } else {
                 console.log('[AI2SQL] Starting non-streaming SQL generation');
