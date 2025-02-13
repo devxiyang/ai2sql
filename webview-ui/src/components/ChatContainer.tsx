@@ -27,9 +27,17 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ messages, currentResponse
     }
   };
 
+  // Scroll to bottom whenever messages change
   useEffect(() => {
     scrollToBottom();
-  }, [messages, currentResponse, isLoading]);
+  }, [messages]);
+
+  // Scroll to bottom when current response or loading state changes
+  useEffect(() => {
+    if (isLoading || currentResponse) {
+      scrollToBottom();
+    }
+  }, [currentResponse, isLoading]);
 
   console.log('ChatContainer render:', {
     messagesCount: messages.length,

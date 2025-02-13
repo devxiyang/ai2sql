@@ -161,7 +161,7 @@ const App: React.FC = () => {
     }
   };
 
-  const handleSendMessage = (content: string) => {
+  const handleSendMessage = async (content: string) => {
     if (!content.trim() || isLoading) return;
     
     // Add user message to chat
@@ -171,21 +171,25 @@ const App: React.FC = () => {
       isUser: true,
       timestamp: new Date().toLocaleTimeString(),
     };
-    
-    setMessages(prev => {
-      const newMessages = [...prev, newMessage];
-      // If this is the first user message, update session name
-      if (!prev.some(m => m.isUser)) {
-        vscode.postMessage({
-          type: 'rename_session',
-          sessionId: activeSessionId,
-          name: generateSessionName([newMessage])
-        });
-      }
-      return newMessages;
+    messageIdCounter.current += 1;
+
+    // Update messages state immediately and wait for the state to be updated
+    await new Promise<void>(resolve => {
+      setMessages(prev => {
+        const updatedMessages = [...prev, newMessage];
+        resolve();
+        return updatedMessages;
+      });
     });
     
-    messageIdCounter.current += 1;
+    // If this is the first user message, update session name
+    if (!messages.some(m => m.isUser)) {
+      vscode.postMessage({
+        type: 'rename_session',
+        sessionId: activeSessionId,
+        name: generateSessionName([newMessage])
+      });
+    }
     
     // Reset state for new response
     setIsLoading(true);
@@ -197,7 +201,7 @@ const App: React.FC = () => {
         type: content.toLowerCase().includes('optimize') ? 'optimize' : 'generate',
         [content.toLowerCase().includes('optimize') ? 'sql' : 'prompt']: content,
         stream: true,
-        history: messages.map(msg => ({
+        history: [...messages, newMessage].map(msg => ({
           content: msg.content,
           isUser: msg.isUser
         }))
