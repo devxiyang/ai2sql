@@ -7,10 +7,19 @@ interface ChatHistoryMessage {
     isUser: boolean;
 }
 
+interface ChatSummaryCache {
+    summary: string;
+    messageCount: number;
+    totalLength: number;
+}
+
 export class UnifiedAIService implements BaseAIService {
     private client: OpenAI;
     private model: string;
-    private readonly MAX_HISTORY_MESSAGES = 50;  // Increased due to 64k context window
+    private summaryCache: ChatSummaryCache | null = null;
+    private readonly MAX_CONTEXT_CHARS = 64 * 1024;  // 64k context window
+    private readonly CONTEXT_THRESHOLD = 0.7;  // Start summarizing at 70% of max context
+    private readonly MAX_HISTORY_MESSAGES = 50;  // Maximum number of messages to keep
     private readonly STREAM_TIMEOUT = 3600000;   // 60 minutes timeout for streaming
     private readonly INITIAL_CHUNK_TIMEOUT = 300000;  // 5 minutes timeout for first chunk
     private readonly CHUNK_TIMEOUT = 60000;      // 60 seconds timeout for subsequent chunks
@@ -26,14 +35,117 @@ export class UnifiedAIService implements BaseAIService {
         console.log('AI service initialized with model:', this.model);
     }
 
-    private formatChatHistory(messages: ChatHistoryMessage[]): ChatCompletionMessageParam[] {
-        // Take only the last MAX_HISTORY_MESSAGES messages to stay within context window
+    private async summarizeHistory(messages: ChatHistoryMessage[]): Promise<string> {
+        try {
+            const completion = await this.client.chat.completions.create({
+                model: this.model,
+                messages: [
+                    {
+                        role: 'system',
+                        content: `You are a SQL conversation summarizer. Summarize the conversation history while preserving:
+1. Important table names and their relationships
+2. Key business requirements
+3. Any specific SQL patterns or preferences mentioned
+4. Critical constraints or conditions
+
+Keep the summary concise but informative. Format in Markdown with bullet points.`
+                    },
+                    ...messages.map(msg => ({
+                        role: msg.isUser ? 'user' as const : 'assistant' as const,
+                        content: msg.content || ''
+                    }))
+                ],
+                temperature: 0.3,
+            });
+
+            const summary = completion.choices[0]?.message?.content || '';
+            if (!summary) {
+                throw new Error('Failed to generate summary');
+            }
+
+            return `Previous conversation summary:\n${summary}`;
+        } catch (error) {
+            console.error('Error generating summary:', error);
+            throw error;
+        }
+    }
+
+    private calculateTotalLength(messages: ChatCompletionMessageParam[]): number {
+        return messages.reduce((sum, msg) => sum + (msg.content?.length || 0), 0);
+    }
+
+    private async formatChatHistory(messages: ChatHistoryMessage[]): Promise<ChatCompletionMessageParam[]> {
+        // Take only the last MAX_HISTORY_MESSAGES messages
         const recentMessages = messages.slice(-this.MAX_HISTORY_MESSAGES);
         
-        return recentMessages.map(msg => ({
+        // Convert messages to ChatCompletionMessageParam format
+        const formattedMessages = recentMessages.map(msg => ({
             role: msg.isUser ? 'user' as const : 'assistant' as const,
             content: msg.content || ''
         }));
+
+        // Calculate total length
+        const totalLength = this.calculateTotalLength(formattedMessages);
+        const thresholdLength = this.MAX_CONTEXT_CHARS * this.CONTEXT_THRESHOLD;
+
+        // If we're under the threshold, return as is
+        if (totalLength <= thresholdLength) {
+            console.log(`Using full history (${totalLength} chars)`);
+            return formattedMessages;
+        }
+
+        // If we have a cached summary and it's still valid
+        if (this.summaryCache && 
+            this.summaryCache.messageCount === messages.length - 1 && 
+            this.summaryCache.totalLength === totalLength) {
+            console.log('Using cached summary');
+            return [
+                {
+                    role: 'assistant',
+                    content: this.summaryCache.summary
+                },
+                formattedMessages[formattedMessages.length - 1] // Add the latest message
+            ];
+        }
+
+        try {
+            // Generate new summary
+            console.log(`Generating new summary for ${formattedMessages.length} messages`);
+            const summary = await this.summarizeHistory(recentMessages.slice(0, -1));
+            
+            // Cache the summary
+            this.summaryCache = {
+                summary,
+                messageCount: messages.length - 1,
+                totalLength
+            };
+
+            // Return summary + latest message
+            return [
+                {
+                    role: 'assistant',
+                    content: summary
+                },
+                formattedMessages[formattedMessages.length - 1] // Add the latest message
+            ];
+        } catch (error) {
+            console.warn('Error summarizing history, falling back to recent messages:', error);
+            // If summarization fails, take the most recent messages that fit within threshold
+            let truncatedMessages = [];
+            let currentLength = 0;
+            
+            for (let i = formattedMessages.length - 1; i >= 0; i--) {
+                const messageLength = formattedMessages[i].content?.length || 0;
+                if (currentLength + messageLength > thresholdLength) {
+                    break;
+                }
+                truncatedMessages.unshift(formattedMessages[i]);
+                currentLength += messageLength;
+            }
+
+            console.log(`Falling back to ${truncatedMessages.length} recent messages`);
+            return truncatedMessages;
+        }
     }
 
     private async handleStream(
@@ -103,7 +215,7 @@ export class UnifiedAIService implements BaseAIService {
         console.log('Chat history length:', chatHistory.length);
         
         try {
-            const formattedHistory = this.formatChatHistory(chatHistory);
+            const formattedHistory = await this.formatChatHistory(chatHistory);
             console.log('Formatted history length:', formattedHistory.length);
             
             const messages: ChatCompletionMessageParam[] = [
@@ -273,4 +385,4 @@ Start with the optimized SQL query, then explain the changes and why they improv
             throw error;
         }
     }
-} 
+}
