@@ -51,27 +51,45 @@ const App: React.FC = () => {
           setCurrentResponse('');
         } else if (message.content !== undefined) {
           if (message.streaming) {
+            console.log('[Frontend] Received streaming message:', {
+              content: message.content,
+              currentResponseLength: currentResponse.length
+            });
+            // For streaming messages, only update currentResponse
             setCurrentResponse(message.content);
           } else {
-            const finalContent = message.content || currentResponse;
-            
-            if (finalContent) {
-              setMessages(prev => [...prev, {
-                id: messageIdCounter.current.toString(),
-                content: finalContent,
-                isUser: false,
-                timestamp: new Date().toLocaleTimeString(),
-              }]);
+            console.log('[Frontend] Received final message:', {
+              content: message.content,
+              currentResponse,
+              messagesCount: messages.length
+            });
+            // When streaming ends or for non-streaming messages
+            if (message.content) {
+              // Add the message to the messages list
+              setMessages(prev => {
+                console.log('[Frontend] Updating messages:', {
+                  prevCount: prev.length,
+                  newContent: message.content
+                });
+                return [
+                  ...prev,
+                  {
+                    id: messageIdCounter.current.toString(),
+                    content: message.content,
+                    isUser: false,
+                    timestamp: new Date().toLocaleTimeString(),
+                  }
+                ];
+              });
               messageIdCounter.current += 1;
-              
-              // Clear loading state and current response
-              setIsLoading(false);
-              setCurrentResponse('');
-            } else {
-              setIsLoading(false);
-              setCurrentResponse('');
             }
+            setIsLoading(false);
+            setCurrentResponse('');
           }
+        } else if (!message.streaming) {
+          // If no content and not streaming, just clear states
+          setIsLoading(false);
+          setCurrentResponse('');
         }
       }
     };
@@ -81,7 +99,7 @@ const App: React.FC = () => {
     return () => {
       window.removeEventListener('message', handleMessage);
     };
-  }, [currentResponse]);
+  }, []);
 
   const handleNewSession = () => {
     vscode.postMessage({ type: 'new_session' });

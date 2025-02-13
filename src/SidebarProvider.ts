@@ -43,6 +43,18 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         console.log('[AI2SQL] Received message:', data);
       try {
         switch (data.type) {
+          case 'clear_sessions':
+            await this.sessionManager.clearAllSessions();
+            this.notifySessionUpdate();
+            if (this._view) {
+              this._view.webview.postMessage({
+                type: 'response',
+                content: 'All sessions cleared. Starting fresh!',
+                isUser: false
+              });
+            }
+            break;
+
           case 'new_session':
             const newSession = this.sessionManager.createNewSession();
             this.notifySessionUpdate();
@@ -68,46 +80,58 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
               console.log('[AI2SQL] Getting AI service for SQL generation');
               const aiService = await this._aiServiceFactory.getService();
               
-              // Add user message to session
+              // Add user message to session and get active session
               this.sessionManager.addMessageToActiveSession(data.prompt, true);
-
+              
               // Get session messages
-              const session = this.sessionManager.getActiveSession();
-              if (!session) {
-                throw new Error('No active session');
+              const activeSession = this.sessionManager.getActiveSession();
+              if (!activeSession) {
+                throw new Error('Failed to get active session');
               }
+              
+              console.log(`Processing request for session: ${activeSession.id}`);
 
               // Generate SQL with streaming
               if (data.stream) {
                 console.log('[AI2SQL] Starting streaming SQL generation');
+                let finalContent = '';
+                console.log('[Backend] Starting SQL generation for prompt:', data.prompt);
                 await aiService.generateSQL(
                   data.prompt,
                   (chunk) => {
+                    console.log('[Backend] Received chunk:', chunk);
+                    finalContent += chunk;
+                    console.log('[Backend] Current finalContent:', finalContent);
                     if (this._view) {
+                      console.log('[Backend] Sending streaming message');
                       this._view.webview.postMessage({
                         type: 'response',
-                        content: chunk,
+                        content: finalContent,
                         streaming: true
                       });
                     }
                   },
-                  session.messages.map(m => ({ content: m.content, isUser: m.isUser }))
+                  activeSession.messages.map(m => ({ content: m.content, isUser: m.isUser }))
                 );
                 
                 // Send final message to indicate stream end
                 if (this._view) {
                   this._view.webview.postMessage({
                     type: 'response',
+                    content: finalContent,
                     streaming: false
                   });
                 }
+                
+                // Add AI response to session
+                this.sessionManager.addMessageToActiveSession(finalContent, false);
                 console.log('[AI2SQL] Streaming SQL generation completed');
               } else {
                 console.log('[AI2SQL] Starting non-streaming SQL generation');
                 const sql = await aiService.generateSQL(
                   data.prompt,
                   undefined,
-                  session.messages.map(m => ({ content: m.content, isUser: m.isUser }))
+                  activeSession.messages.map(m => ({ content: m.content, isUser: m.isUser }))
                 );
                 if (this._view) {
                   this._view.webview.postMessage({
@@ -148,13 +172,15 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
               // Optimize SQL with streaming
               if (data.stream) {
                 console.log('[AI2SQL] Starting streaming SQL optimization');
+                let finalContent = '';
                 await aiService.optimizeSQL(
                   data.sql,
                   (chunk) => {
+                    finalContent += chunk;
                     if (this._view) {
                       this._view.webview.postMessage({
                         type: 'response',
-                        content: chunk,
+                        content: finalContent,
                         streaming: true
                       });
                     }
@@ -165,9 +191,13 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 if (this._view) {
                   this._view.webview.postMessage({
                     type: 'response',
+                    content: finalContent,
                     streaming: false
                   });
                 }
+                
+                // Add AI response to session
+                this.sessionManager.addMessageToActiveSession(finalContent, false);
                 console.log('[AI2SQL] Streaming SQL optimization completed');
               } else {
                 console.log('[AI2SQL] Starting non-streaming SQL optimization');

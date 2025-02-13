@@ -19,31 +19,91 @@ export interface ChatSession {
 export class SessionManager {
   private sessions: ChatSession[] = [];
   private activeSessionId: string = '';
-  private readonly storageKey = 'ai2sql.sessions';
+  private readonly MAX_MESSAGES_PER_SESSION = 20; // Limit messages per session
   private readonly context: vscode.ExtensionContext;
+  private readonly chatDir: string;
 
   constructor(context: vscode.ExtensionContext) {
     this.context = context;
-    this.loadSessions();
-    if (this.sessions.length === 0) {
-      this.createNewSession();
+    
+    // Get workspace root
+    const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    if (!workspaceRoot) {
+      throw new Error('No workspace folder found');
+    }
+    
+    // Create .ai2sql/chat directory
+    this.chatDir = vscode.Uri.joinPath(vscode.Uri.file(workspaceRoot), '.ai2sql', 'chat').fsPath;
+    this.ensureChatDirExists().then(() => {
+      this.loadSessions().then(() => {
+        if (this.sessions.length === 0) {
+          this.createNewSession();
+        }
+      });
+    }).catch(error => {
+      console.error('Error initializing session manager:', error);
+    });
+  }
+
+  private async ensureChatDirExists(): Promise<void> {
+    try {
+      await vscode.workspace.fs.createDirectory(vscode.Uri.file(this.chatDir));
+    } catch (error) {
+      console.error('Error creating chat directory:', error);
+      throw error;
     }
   }
 
-  private loadSessions(): void {
-    const sessionsData = this.context.globalState.get<ChatSession[]>(this.storageKey);
-    if (sessionsData) {
-      this.sessions = sessionsData;
-      // Set the most recently updated session as active
-      const mostRecent = this.sessions.reduce((prev, current) => {
-        return new Date(prev.updatedAt) > new Date(current.updatedAt) ? prev : current;
-      });
-      this.activeSessionId = mostRecent.id;
+  private async loadSessions(): Promise<void> {
+    try {
+      // Read all files in the chat directory
+      const entries = await vscode.workspace.fs.readDirectory(vscode.Uri.file(this.chatDir));
+      this.sessions = [];
+      
+      for (const [name, type] of entries) {
+        if (type === vscode.FileType.File && name.endsWith('.json')) {
+          try {
+            const content = await vscode.workspace.fs.readFile(vscode.Uri.file(vscode.Uri.joinPath(vscode.Uri.file(this.chatDir), name).fsPath));
+            const session = JSON.parse(content.toString()) as ChatSession;
+            // Validate UUID
+            if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(session.id)) {
+              session.id = uuidv4();
+            }
+            this.sessions.push(session);
+          } catch (error) {
+            console.error(`Error loading session from ${name}:`, error);
+          }
+        }
+      }
+      
+      // Set most recent as active
+      if (this.sessions.length > 0) {
+        const mostRecent = this.sessions.reduce((prev, current) => {
+          return new Date(prev.updatedAt) > new Date(current.updatedAt) ? prev : current;
+        });
+        this.activeSessionId = mostRecent.id;
+      }
+    } catch (error) {
+      console.error('Error loading sessions:', error);
     }
   }
 
   private async saveSessions(): Promise<void> {
-    await this.context.globalState.update(this.storageKey, this.sessions);
+    try {
+      // Save each session to a separate file
+      for (const session of this.sessions) {
+        const timestamp = new Date(session.createdAt).toISOString().replace(/[:.]/g, '-');
+        const filename = `${timestamp}_${session.id}.json`;
+        const filePath = vscode.Uri.joinPath(vscode.Uri.file(this.chatDir), filename);
+        await vscode.workspace.fs.writeFile(
+          filePath,
+          Buffer.from(JSON.stringify(session, null, 2))
+        );
+      }
+    } catch (error) {
+      console.error('Error saving sessions:', error);
+      throw error;
+    }
   }
 
   public createNewSession(): ChatSession {
@@ -119,19 +179,57 @@ export class SessionManager {
 
   public addMessageToActiveSession(content: string, isUser: boolean): void {
     const session = this.getActiveSession();
-    if (session) {
-      session.messages.push({
+    if (!session) {
+      console.warn('No active session found, creating new session');
+      const newSession = this.createNewSession();
+      this.activeSessionId = newSession.id;
+    }
+
+    const activeSession = this.getActiveSession();
+    if (activeSession) {
+      console.log(`Adding message to session ${activeSession.id}`);
+      // Add new message
+      activeSession.messages.push({
         id: uuidv4(),
         content,
         isUser,
         timestamp: new Date().toISOString()
       });
-      session.updatedAt = new Date().toISOString();
+      
+      // Keep only the most recent messages
+      if (activeSession.messages.length > this.MAX_MESSAGES_PER_SESSION) {
+        console.log(`Trimming session ${activeSession.id} messages from ${activeSession.messages.length} to ${this.MAX_MESSAGES_PER_SESSION}`);
+        activeSession.messages = activeSession.messages.slice(-this.MAX_MESSAGES_PER_SESSION);
+      }
+      
+      activeSession.updatedAt = new Date().toISOString();
       this.saveSessions();
     }
   }
 
   public getActiveSessionId(): string {
     return this.activeSessionId;
+  }
+
+  public async clearAllSessions(): Promise<void> {
+    console.log('Clearing all sessions');
+    try {
+      // Delete all files in the chat directory
+      const files = await vscode.workspace.fs.readDirectory(vscode.Uri.file(this.chatDir));
+      for (const [name, type] of files) {
+        if (type === vscode.FileType.File && name.endsWith('.json')) {
+          const filePath = vscode.Uri.joinPath(vscode.Uri.file(this.chatDir), name);
+          await vscode.workspace.fs.delete(filePath);
+        }
+      }
+      
+      // Reset session state
+      this.sessions = [];
+      this.activeSessionId = '';
+      this.createNewSession();
+    } catch (error) {
+      console.error('Error clearing sessions:', error);
+      throw error;
+    }
   }
 }
