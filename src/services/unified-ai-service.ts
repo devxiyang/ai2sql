@@ -112,12 +112,95 @@ LATERAL VIEW explode(
     split(get_json_object(event, '$.actions'), ',')
 ) actions AS action;
 
--- StarRocks: JSON functions
+-- StarRocks: Basic JSON functions
 SELECT 
     id,
     get_json_string(data, '$.events[0].type') AS first_event,
     get_json_array(data, '$.tags') AS tags
 FROM table;
+
+-- StarRocks: Complex nested arrays with UNNEST
+-- Sample data:
+/*
+{
+    "user_id": 123,
+    "sessions": [
+        {
+            "id": "s1",
+            "events": [
+                {"type": "click", "items": ["item1", "item2"]},
+                {"type": "view", "items": ["item3"]}
+            ]
+        },
+        {
+            "id": "s2",
+            "events": [
+                {"type": "purchase", "items": ["item1"]}
+            ]
+        }
+    ]
+}
+*/
+
+-- Method 1: Multiple UNNEST for deep nesting
+SELECT 
+    get_json_int(data, '$.user_id') AS user_id,
+    session_id,
+    event_type,
+    item
+FROM table,
+    UNNEST(get_json_array(data, '$.sessions')) AS session_data,
+    UNNEST(get_json_array(session_data, '$.events')) AS event_data,
+    UNNEST(get_json_array(event_data, '$.items')) AS item
+WHERE get_json_string(event_data, '$.type') = 'click';
+
+-- Method 2: Combining with subquery for better readability
+WITH user_sessions AS (
+    SELECT 
+        get_json_int(data, '$.user_id') AS user_id,
+        get_json_string(session_data, '$.id') AS session_id,
+        event_data
+    FROM table,
+        UNNEST(get_json_array(data, '$.sessions')) AS session_data,
+        UNNEST(get_json_array(session_data, '$.events')) AS event_data
+),
+flattened_events AS (
+    SELECT 
+        user_id,
+        session_id,
+        get_json_string(event_data, '$.type') AS event_type,
+        item
+    FROM user_sessions,
+        UNNEST(get_json_array(event_data, '$.items')) AS item
+)
+SELECT 
+    user_id,
+    session_id,
+    event_type,
+    array_agg(item) AS items
+FROM flattened_events
+GROUP BY user_id, session_id, event_type;
+
+-- Method 3: Array operations with error handling
+SELECT 
+    get_json_int(data, '$.user_id') AS user_id,
+    get_json_string(session_data, '$.id') AS session_id,
+    get_json_string(event_data, '$.type') AS event_type,
+    COALESCE(
+        array_length(get_json_array(event_data, '$.items')),
+        0
+    ) AS item_count,
+    CASE 
+        WHEN get_json_array(event_data, '$.items') IS NULL THEN ARRAY[]
+        ELSE get_json_array(event_data, '$.items')
+    END AS items
+FROM table,
+    UNNEST(
+        COALESCE(get_json_array(data, '$.sessions'), ARRAY[])
+    ) AS session_data,
+    UNNEST(
+        COALESCE(get_json_array(session_data, '$.events'), ARRAY[])
+    ) AS event_data;
 \`\`\`
 
 💡 Optimization Tips:
