@@ -147,6 +147,18 @@ Notes:
     };
 
     constructor(config: BaseAIServiceConfig) {
+        if (!config.apiKey?.trim()) {
+            throw new Error(
+                'API key is not configured. Please configure your API key in VSCode settings:\n' +
+                '1. Open VSCode Settings (Cmd/Ctrl + ,)\n' +
+                '2. Search for "AI2SQL"\n' +
+                '3. Set your API key in the appropriate field:\n' +
+                '   - For Deepseek: ai2sql.deepseekApiKey\n' +
+                '   - For OpenAI: ai2sql.openaiApiKey\n' +
+                '   - For Claude: ai2sql.claudeApiKey'
+            );
+        }
+
         this.client = new OpenAI({
             apiKey: config.apiKey,
             baseURL: config.baseURL,
