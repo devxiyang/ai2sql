@@ -29,6 +29,40 @@ Key Capabilities:
    - Dynamic JSON path access
    - Complex type transformations
 
+   When you need to process JSON data, please provide:
+   1. Sample JSON structure (a few representative records)
+   2. The fields you want to extract or transform
+   3. Any specific requirements about:
+      - Handling missing or malformed JSON
+      - Dealing with nested arrays
+      - Error handling preferences
+      - Output format needs
+   
+   Example request format:
+   "I have JSON data in column 'event_data' with this structure:
+   {
+     'user': {
+       'id': 123,
+       'preferences': ['a', 'b', 'c'],
+       'profile': {
+         'settings': [
+           {'key': 'theme', 'value': 'dark'},
+           {'key': 'lang', 'value': 'en'}
+         ]
+       }
+     },
+     'events': [
+       {'type': 'click', 'timestamp': '2024-01-01', 'data': {...}},
+       {'type': 'view', 'timestamp': '2024-01-02', 'data': {...}}
+     ]
+   }
+   
+   I need to:
+   1. Extract user preferences as separate rows
+   2. Get all settings as key-value pairs
+   3. Flatten the events array
+   4. Handle cases where 'profile' or 'events' might be missing"
+
    Common Patterns for Hive:
    # JSON array flattening (Modern Hive)
    SELECT 
