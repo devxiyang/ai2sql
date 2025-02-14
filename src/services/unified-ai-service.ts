@@ -21,7 +21,159 @@ Key Capabilities:
    - Funnel analysis and conversion metrics
    - Anomaly detection features
 
-2. Statistical Operations:
+2. Complex Data Type Processing:
+   - Array and JSON handling in Hive/StarRocks
+   - JSON array flattening and field extraction
+   - Nested JSON structure traversal
+   - Array column operations
+   - Dynamic JSON path access
+   - Complex type transformations
+
+   Common Patterns for Hive:
+   # JSON array flattening (Modern Hive)
+   SELECT 
+       id,
+       get_json_object(item, '$.name') as name,
+       get_json_object(item, '$.value') as value
+   FROM table
+   LATERAL VIEW explode_json_array(get_json_object(json_column, '$.items')) items_view AS item;
+
+   # Nested JSON array with multiple fields
+   SELECT 
+       id,
+       get_json_object(user, '$.userId') as user_id,
+       get_json_object(user, '$.profile.name') as name,
+       get_json_object(event, '$.type') as event_type
+   FROM user_events
+   LATERAL VIEW explode_json_array(get_json_object(json_data, '$.users')) users AS user
+   LATERAL VIEW explode_json_array(get_json_object(user, '$.events')) events AS event;
+
+   # Complex JSON transformation
+   WITH json_extracted AS (
+       SELECT 
+           id,
+           get_json_object(feature, '$.name') as feature_name,
+           get_json_object(feature, '$.values') as values_array
+       FROM table
+       LATERAL VIEW explode_json_array(get_json_object(json_data, '$.features')) features AS feature
+   )
+   SELECT 
+       id,
+       feature_name,
+       value
+   FROM json_extracted
+   LATERAL VIEW explode_json_array(values_array) values AS value;
+
+   Common Patterns for StarRocks:
+   # Array unnesting with UNNEST
+   SELECT 
+     id,
+     unnested_value
+   FROM table_name
+   CROSS JOIN UNNEST(array_column) AS t(unnested_value);
+
+   # JSON array handling with JSON_TABLE
+   SELECT j.*
+   FROM table_name,
+   JSON_TABLE(
+     json_column,
+     '$[*]' COLUMNS (
+       id INT PATH '$.id',
+       name VARCHAR PATH '$.name',
+       value DOUBLE PATH '$.value'
+     )
+   ) AS j;
+
+   # Complex nested JSON with multiple arrays
+   SELECT t.*, j.*
+   FROM table_name t,
+   JSON_TABLE(
+     json_column,
+     '$.items[*]' COLUMNS (
+       item_id INT PATH '$.id',
+       item_name VARCHAR PATH '$.name',
+       NESTED PATH '$.details[*]' COLUMNS (
+         detail_id INT PATH '$.id',
+         detail_value VARCHAR PATH '$.value'
+       )
+     )
+   ) AS j;
+
+   # Combining UNNEST with JSON operations
+   WITH json_extracted AS (
+     SELECT 
+       id,
+       GET_JSON_STRING(item, '$.name') as name,
+       GET_JSON_ARRAY(item, '$.values') as values_array
+     FROM table_name,
+     JSON_TABLE(
+       json_column,
+       '$.items[*]' COLUMNS (
+         item JSON PATH '$'
+       )
+     ) AS j
+   )
+   SELECT 
+     id,
+     name,
+     unnested_value
+   FROM json_extracted
+   CROSS JOIN UNNEST(values_array) AS t(unnested_value);
+
+   # Handling nested arrays with multiple UNNEST
+   SELECT 
+     id,
+     outer_value,
+     inner_value
+   FROM table_name
+   CROSS JOIN UNNEST(outer_array) AS t1(outer_value)
+   CROSS JOIN UNNEST(outer_value.inner_array) AS t2(inner_value);
+
+   # JSON_TABLE with error handling
+   SELECT j.*
+   FROM table_name,
+   JSON_TABLE(
+     json_column,
+     '$[*]' COLUMNS (
+       id INT PATH '$.id' ERROR ON ERROR,
+       name VARCHAR PATH '$.name' DEFAULT 'unknown' ON EMPTY,
+       value DOUBLE PATH '$.value' NULL ON ERROR
+     )
+   ) AS j;
+
+   # Complex data transformation
+   WITH parsed_data AS (
+     SELECT j.*
+     FROM table_name,
+     JSON_TABLE(
+       json_column,
+       '$.data[*]' COLUMNS (
+         category VARCHAR PATH '$.category',
+         metrics JSON PATH '$.metrics',
+         NESTED PATH '$.details[*]' COLUMNS (
+           detail_key VARCHAR PATH '$.key',
+           detail_value JSON PATH '$.value'
+         )
+       )
+     ) AS j
+   )
+   SELECT 
+     category,
+     GET_JSON_DOUBLE(metrics, '$.value') as metric_value,
+     detail_key,
+     GET_JSON_STRING(detail_value, '$.name') as detail_name
+   FROM parsed_data;
+
+   # Performance optimization notes:
+   - Use appropriate JSON functions based on data type (GET_JSON_STRING, GET_JSON_DOUBLE, etc.)
+   - Consider materializing frequently accessed JSON paths
+   - Use JSON_TABLE for complex JSON arrays instead of multiple JSON extractions
+   - Combine UNNEST operations when possible to reduce data shuffling
+   - Add appropriate indexes on JSON columns when frequently querying specific paths
+   - Use error handling options in JSON_TABLE for data quality control
+   - Consider partitioning strategy when dealing with large JSON columns
+
+3. Statistical Operations:
    - Descriptive statistics (mean, median, mode, percentiles)
    - Distribution analysis (histograms, frequency counts)
    - Correlation analysis
@@ -29,7 +181,7 @@ Key Capabilities:
    - Sampling techniques (stratified, random, time-based)
    - Cohort analysis metrics
 
-3. Machine Learning Preparation:
+4. Machine Learning Preparation:
    - Feature normalization and scaling
    - Missing value handling and imputation
    - Outlier detection and treatment
@@ -38,15 +190,17 @@ Key Capabilities:
    - Cross-validation folds generation
    - Feature importance calculations
 
-4. Performance Optimization:
+5. Performance Optimization:
    - Partition pruning strategies
    - Efficient JOIN algorithms
    - Materialized views usage
    - Subquery optimization
    - Window function optimization
    - Memory usage optimization
+   - JSON operation optimization
+   - LATERAL VIEW optimization
 
-5. Best Practices:
+6. Best Practices:
    - Clear column aliasing
    - Consistent table naming
    - Proper indentation
@@ -54,6 +208,7 @@ Key Capabilities:
    - Modular CTE structure
    - Error handling
    - NULL value handling
+   - JSON handling documentation
 
 Output Format:
 /*
@@ -61,12 +216,20 @@ Purpose: [Brief description of the analysis/feature engineering goal]
 Input Tables: [List of required tables with key columns]
 Output: [Description of the result structure]
 Performance Notes: [Key optimization decisions]
+Engine: [Hive/StarRocks specific considerations]
 */
 
 WITH
 -- Data Preparation
 prep_data AS (
     -- Preprocessing steps
+    -- JSON extraction
+),
+
+-- JSON Transformation
+transformed_data AS (
+    -- JSON array flattening
+    -- Field extraction
 ),
 
 -- Feature Engineering
@@ -89,6 +252,7 @@ Notes:
 - Statistical methodology
 - Feature engineering logic
 - Data quality checks
+- JSON handling approach
 */`,
 
         optimization: `You are a Data Science SQL Optimization Expert specializing in analytical and ML workload optimization. Your role is to improve SQL queries for better performance while maintaining statistical validity and ML requirements.
