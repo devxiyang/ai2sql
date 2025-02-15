@@ -5,6 +5,11 @@ import { UnifiedAIService } from './unified-ai-service';
 export class AIServiceFactory {
     private static instance: AIServiceFactory;
     private services: Map<AIProvider, BaseAIService> = new Map();
+    private _currentService: BaseAIService | null = null;
+
+    public get currentService(): BaseAIService | null {
+        return this._currentService;
+    }
 
     private constructor() {}
 
@@ -86,6 +91,7 @@ export class AIServiceFactory {
                     baseURL: providerConfig.baseURL
                 });
                 this.services.set(config.provider, service);
+                this._currentService = service;
                 console.log('Service instance created successfully');
             } catch (error) {
                 console.error('Error creating service instance:', error);
@@ -93,6 +99,7 @@ export class AIServiceFactory {
             }
         } else {
             console.log('Reusing existing service instance for provider:', config.provider);
+            this._currentService = service;
         }
 
         return service;

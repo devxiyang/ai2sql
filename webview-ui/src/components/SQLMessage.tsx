@@ -74,7 +74,7 @@ const SQLMessage: React.FC<SQLMessageProps> = ({ sql, onCopy, loading = false, s
       }}>
         <div className="flex items-center gap-2">
           <span style={{ color: 'var(--vscode-tab-inactiveForeground)' }}>
-            SQL Query {(loading || streaming) && <LoadingDots />}
+            SQL Query {loading && <LoadingDots />}
           </span>
         </div>
         <div className="flex items-center">
@@ -98,7 +98,7 @@ const SQLMessage: React.FC<SQLMessageProps> = ({ sql, onCopy, loading = false, s
       </div>
 
       {/* Code content */}
-      <div className="p-4" style={{
+      <div className="p-4 relative" style={{
         backgroundColor: 'var(--vscode-editor-background)',
       }}>
         {loading && !sql.trim() ? (
@@ -113,27 +113,40 @@ const SQLMessage: React.FC<SQLMessageProps> = ({ sql, onCopy, loading = false, s
             </div>
           </div>
         ) : (
-          <SyntaxHighlighter
-            language="sql"
-            style={customStyle}
-            showLineNumbers={true}
-            wrapLongLines={false}
-            customStyle={{
-              margin: 0,
-              background: 'transparent',
-              minHeight: '2em',
-            }}
-            lineNumberStyle={{
-              minWidth: '2em',
-              paddingRight: '1em',
-              textAlign: 'right',
-              userSelect: 'none',
-              opacity: 0.5,
-              color: 'var(--vscode-editorLineNumber-foreground)',
-            }}
-          >
-            {sql.trim()}
-          </SyntaxHighlighter>
+          <>
+            <SyntaxHighlighter
+              language="sql"
+              style={customStyle}
+              showLineNumbers={true}
+              wrapLongLines={false}
+              customStyle={{
+                margin: 0,
+                background: 'transparent',
+                minHeight: '2em',
+              }}
+              lineNumberStyle={{
+                minWidth: '2em',
+                paddingRight: '1em',
+                textAlign: 'right',
+                userSelect: 'none',
+                opacity: 0.5,
+                color: 'var(--vscode-editorLineNumber-foreground)',
+              }}
+            >
+              {sql.trim()}
+            </SyntaxHighlighter>
+            {streaming && (
+              <div 
+                className="absolute bottom-4 animate-pulse"
+                style={{
+                  width: '2px',
+                  height: '1.2em',
+                  backgroundColor: 'var(--vscode-textLink-foreground)',
+                  marginLeft: '4px',
+                }}
+              />
+            )}
+          </>
         )}
       </div>
     </div>

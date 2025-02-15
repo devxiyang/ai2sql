@@ -13,19 +13,31 @@ interface ChatContainerProps {
   messages: Message[];
   currentResponse: string;
   isLoading: boolean;
+  onRetry?: () => void;
 }
 
-const ChatContainer: React.FC<ChatContainerProps> = ({ messages, currentResponse, isLoading }) => {
+const ChatContainer: React.FC<ChatContainerProps> = ({ messages, currentResponse, isLoading, onRetry }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasCurrentResponse = currentResponse.trim().length > 0;
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messagesEndRef.current) {
+      const behavior = isLoading ? 'auto' : 'smooth';
+      messagesEndRef.current.scrollIntoView({ behavior });
+    }
   };
 
+  // Scroll to bottom whenever messages change
   useEffect(() => {
     scrollToBottom();
-  }, [messages, currentResponse]);
+  }, [messages]);
+
+  // Scroll to bottom when current response or loading state changes
+  useEffect(() => {
+    if (isLoading || currentResponse) {
+      scrollToBottom();
+    }
+  }, [currentResponse, isLoading]);
 
   console.log('ChatContainer render:', {
     messagesCount: messages.length,
@@ -43,17 +55,19 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ messages, currentResponse
       upperContent.includes('DELETE') ||
       upperContent.includes('CREATE') ||
       upperContent.includes('ALTER')
-    );
+    ) && !content.includes('```');  // Exclude markdown formatted SQL
   };
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 space-y-4">
+    <div className="chat-messages">
       {messages.map((message) => (
         <ChatMessage
           key={message.id}
           message={message.content}
           isUser={message.isUser}
           timestamp={message.timestamp}
+          streaming={false}
+          onRetry={!message.isUser && message.content.toLowerCase().includes('error') ? onRetry : undefined}
         />
       ))}
       {/* Show loading state or streaming response */}
@@ -62,13 +76,23 @@ const ChatContainer: React.FC<ChatContainerProps> = ({ messages, currentResponse
           message="Generating SQL..."
           isUser={false}
           timestamp={new Date().toLocaleTimeString()}
+          streaming={false}
         />
       )}
       {hasCurrentResponse && (
-        <SQLMessage
-          sql={currentResponse}
-          streaming={true}
-        />
+        isSQL(currentResponse) ? (
+          <SQLMessage
+            sql={currentResponse}
+            streaming={isLoading}
+          />
+        ) : (
+          <ChatMessage
+            message={currentResponse}
+            isUser={false}
+            timestamp={new Date().toLocaleTimeString()}
+            streaming={isLoading}
+          />
+        )
       )}
       <div ref={messagesEndRef} />
     </div>

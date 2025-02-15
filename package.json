@@ -49,7 +49,11 @@
       "properties": {
         "ai2sql.provider": {
           "type": "string",
-          "enum": ["openai", "claude", "deepseek"],
+          "enum": [
+            "openai",
+            "claude",
+            "deepseek"
+          ],
           "default": "deepseek",
           "description": "The AI provider to use for SQL generation and optimization"
         },
@@ -101,6 +105,7 @@
     "@types/glob": "^8.1.0",
     "@types/mocha": "^10.0.6",
     "@types/node": "20.x",
+    "@types/uuid": "^10.0.0",
     "@types/vscode": "^1.85.0",
     "@typescript-eslint/eslint-plugin": "^6.15.0",
     "@typescript-eslint/parser": "^6.15.0",
@@ -113,6 +118,7 @@
     "webpack-cli": "^5.1.4"
   },
   "dependencies": {
-    "openai": "^4.83.0"
+    "openai": "^4.83.0",
+    "uuid": "^11.0.5"
   }
 }
