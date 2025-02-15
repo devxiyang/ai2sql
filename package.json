@@ -1,8 +1,9 @@
 {
-  "name": "ai2sql",
-  "displayName": "AI2SQL",
+  "name": "ai2sql-hx",
+  "displayName": "AI2SQL-hx",
   "description": "AI-powered SQL query generator and optimizer in VSCode",
-  "version": "0.0.1",
+  "version": "0.0.2",
+  "publisher": "devxiyang",
   "engines": {
     "vscode": "^1.85.0"
   },
